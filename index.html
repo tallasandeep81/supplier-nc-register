@@ -64,6 +64,7 @@
   .panel-head h2{font-size:14px;margin:0;font-weight:600;}
   .filters{display:flex;gap:8px;}
   .filters select, .filters input{font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;}
+  .filters .btn{padding:6px 12px;font-size:12.5px;}
 
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
   thead th{text-align:left;background:#fafbfc;color:var(--sub);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
@@ -166,6 +167,7 @@
           <option>CAPA Overdue</option>
           <option>Closed</option>
         </select>
+        <button class="btn" id="exportBtn" onclick="exportCSV()">⬇ Export CSV</button>
       </div>
     </div>
     <div style="overflow-x:auto;">
@@ -212,13 +214,16 @@
         <div class="field"><label>Total Stock Available</label><input type="number" id="f_totalStock"></div>
         <div class="field span2"><label>Sub-Defect / Description</label><textarea id="f_subDefect"></textarea></div>
         <div class="field span2"><label>Nature of Complaint</label><textarea id="f_nature"></textarea></div>
+        <div class="field span2"><label>Traceability (Date Code / Batch / Docket No.)</label><input id="f_traceability" placeholder="e.g. Docket HYD93400793, D.C No. 104"></div>
+        <div class="field"><label>OK / Reference Sample Photo</label><input type="file" accept="image/*" id="f_okImage"></div>
+        <div class="field"><label>NOT OK / Defect Photo</label><input type="file" accept="image/*" id="f_ngImage"></div>
         <div class="field span2"><label>Remarks</label><textarea id="f_remarks"></textarea></div>
       </div>
       <div class="msg" id="newMsg"></div>
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('newOverlay')">Cancel</button>
-      <button class="btn primary" onclick="submitNew()">Raise NC</button>
+      <button class="btn primary" id="submitNewBtn" onclick="submitNew()">Raise NC</button>
     </div>
   </div>
 </div>
@@ -335,20 +340,24 @@ function renderStats(s) {
   ).join('');
 }
 
-function renderTable() {
+function currentFilteredRows(){
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
   const statusF = document.getElementById('statusFilter').value;
-  const rows = allRows.filter(r => {
+  return allRows.filter(r => {
     const hay = `${r.ncNumber} ${r.supplierName} ${r.partNumber}`.toLowerCase();
     const matchQ = !q || hay.includes(q);
     const matchS = !statusF || r.overallStatus === statusF;
     return matchQ && matchS;
   });
+}
+
+function renderTable() {
+  const rows = currentFilteredRows();
   const body = document.getElementById('regBody');
   document.getElementById('emptyMsg').style.display = rows.length ? 'none' : 'block';
   body.innerHTML = rows.map(r => `
     <tr onclick='openDetail(${JSON.stringify(r.ncNumber)})'>
-      <td class="nc-num">${r.ncNumber}</td>
+      <td class="nc-num">${r.ncNumber} ${(r.okImage || r.ngImage) ? '<span title="Photos attached">📷</span>' : ''}</td>
       <td>${r.dateRaised}</td>
       <td>${r.supplierName}</td>
       <td>${r.partNumber}</td>
@@ -371,7 +380,20 @@ function openNewModal(){
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function openModalById(id){ document.getElementById(id).classList.add('open'); }
 
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    if (!file) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result); // data:mime;base64,....
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function submitNew(){
+  const btn = document.getElementById('submitNewBtn');
+  const okFile = document.getElementById('f_okImage').files[0];
+  const ngFile = document.getElementById('f_ngImage').files[0];
   const data = {
     dateRaised: val('f_dateRaised'), raisedBy: val('f_raisedBy'),
     supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'), supplierContact: val('f_supplierContact'),
@@ -379,7 +401,7 @@ async function submitNew(){
     productFamily: val('f_productFamily'), defectCategory: val('f_defectCategory'),
     subDefect: val('f_subDefect'), nature: val('f_nature'), criticality: val('f_criticality'),
     qtyInspected: numVal('f_qtyInspected'), defectQty: numVal('f_defectQty'), totalStock: numVal('f_totalStock'),
-    stockStatus: val('f_stockStatus'), remarks: val('f_remarks')
+    stockStatus: val('f_stockStatus'), remarks: val('f_remarks'), traceability: val('f_traceability')
   };
   if (!data.dateRaised || !data.supplierName || !data.partNumber) {
     document.getElementById('newMsg').className = 'msg err';
@@ -387,17 +409,30 @@ async function submitNew(){
     return;
   }
   document.getElementById('newMsg').className = 'msg';
-  document.getElementById('newMsg').textContent = 'Saving...';
-  const res = await apiPost({ action: 'create', data });
-  if (res.error) {
-    document.getElementById('newMsg').className = 'msg err';
-    document.getElementById('newMsg').textContent = res.error;
-    return;
+  document.getElementById('newMsg').textContent = okFile || ngFile ? 'Uploading photo(s) & saving...' : 'Saving...';
+  btn.disabled = true;
+  try {
+    if (okFile) {
+      const b64 = await fileToBase64(okFile);
+      data.okImageBase64 = b64; data.okImageMime = okFile.type; data.okImageName = okFile.name;
+    }
+    if (ngFile) {
+      const b64 = await fileToBase64(ngFile);
+      data.ngImageBase64 = b64; data.ngImageMime = ngFile.type; data.ngImageName = ngFile.name;
+    }
+    const res = await apiPost({ action: 'create', data });
+    if (res.error) {
+      document.getElementById('newMsg').className = 'msg err';
+      document.getElementById('newMsg').textContent = res.error;
+      return;
+    }
+    document.getElementById('newMsg').className = 'msg ok';
+    document.getElementById('newMsg').textContent = `Raised as ${res.ncNumber}`;
+    await loadAll();
+    setTimeout(() => closeModal('newOverlay'), 700);
+  } finally {
+    btn.disabled = false;
   }
-  document.getElementById('newMsg').className = 'msg ok';
-  document.getElementById('newMsg').textContent = `Raised as ${res.ncNumber}`;
-  await loadAll();
-  setTimeout(() => closeModal('newOverlay'), 700);
 }
 function val(id){ return document.getElementById(id).value; }
 function numVal(id){ const v = document.getElementById(id).value; return v === '' ? '' : Number(v); }
@@ -406,7 +441,23 @@ async function openDetail(ncNumber){
   const r = allRows.find(x => x.ncNumber === ncNumber);
   if (!r) return;
   document.getElementById('detailTitle').textContent = `${r.ncNumber} — ${r.supplierName}`;
-  document.getElementById('detailBody').innerHTML = stageForm('d3', 'D3 — Containment Action (due within 2 days)', r, 'd3Action', 'd3Due', 'd3Actual', 'd3Status')
+  const photoRow = (r.okImage || r.ngImage || r.traceability) ? `
+    <div class="stage-block">
+      <h4>Reference</h4>
+      <div class="grid2">
+        <div>
+          <div class="field"><label>OK / Reference Sample</label></div>
+          ${r.okImage ? `<a href="${r.okImage}" target="_blank"><img src="${r.okImage}" style="width:100%;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;"></a>` : '<div class="msg" style="color:var(--sub);">No photo attached</div>'}
+        </div>
+        <div>
+          <div class="field"><label>NOT OK / Defect</label></div>
+          ${r.ngImage ? `<a href="${r.ngImage}" target="_blank"><img src="${r.ngImage}" style="width:100%;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;"></a>` : '<div class="msg" style="color:var(--sub);">No photo attached</div>'}
+        </div>
+      </div>
+      ${r.traceability ? `<div class="due" style="margin-top:8px;"><strong>Traceability:</strong> ${r.traceability}</div>` : ''}
+    </div>` : '';
+  document.getElementById('detailBody').innerHTML = photoRow
+    + stageForm('d3', 'D3 — Containment Action (due within 2 days)', r, 'd3Action', 'd3Due', 'd3Actual', 'd3Status')
     + stageForm('d4', 'D4 — Root Cause Analysis (due within 2 weeks)', r, 'd4Rca', 'd4Due', 'd4Actual', 'd4Status', !r.d3Actual)
     + stageForm('d5', 'D5–D8 — Corrective / Preventive Action (due within 2 months)', r, 'd5Capa', 'd5Due', 'd5Actual', 'd5Status', !r.d4Actual);
   document.getElementById('detailOverlay').classList.add('open');
@@ -439,6 +490,46 @@ function toIso(dmy){
   if (parts.length !== 3) return '';
   // Register displays dates as DD.MM.YYYY
   return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+const CSV_COLUMNS = [
+  ['ncNumber', 'NC Number'], ['dateRaised', 'Date Raised'], ['raisedBy', 'Raised By'],
+  ['supplierCode', 'Supplier Code'], ['supplierName', 'Supplier Name'], ['supplierContact', 'Supplier Contact'],
+  ['poNumber', 'PO Number'], ['partNumber', 'Part Number'], ['partDescription', 'Part Description'],
+  ['productFamily', 'Product Family'], ['defectCategory', 'Defect Category'], ['subDefect', 'Sub-Defect'],
+  ['nature', 'Nature of Complaint'], ['criticality', 'Criticality'],
+  ['qtyInspected', 'Qty Inspected'], ['defectQty', 'Defect Qty'], ['ppm', 'PPM'],
+  ['totalStock', 'Total Stock Available'], ['stockStatus', 'Stock Status'],
+  ['d3Action', 'D3 - Containment Action'], ['d3Due', 'D3 Due Date'], ['d3Actual', 'D3 Actual Date'], ['d3Status', 'D3 Status'],
+  ['d4Rca', 'D4 - Root Cause (RCA)'], ['d4Due', 'D4 Due Date'], ['d4Actual', 'D4 Actual Date'], ['d4Status', 'D4 Status'],
+  ['d5Capa', 'D5-D8 - CAPA'], ['d5Due', 'D5-D8 Due Date'], ['d5Actual', 'D5-D8 Actual Date'], ['d5Status', 'D5-D8 Status'],
+  ['horizontalDeploy', 'Horizontal Deployment'], ['effectiveness', 'Effectiveness Monitoring'],
+  ['overallStatus', 'Overall NC Status'], ['remarks', 'Remarks'],
+  ['traceability', 'Traceability'], ['okImage', 'OK Image URL'], ['ngImage', 'NG Image URL']
+];
+
+function csvEscape(val){
+  const s = (val === undefined || val === null) ? '' : String(val);
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function exportCSV(){
+  const rows = currentFilteredRows();
+  if (!rows.length) { alert('No rows to export for the current filter.'); return; }
+  const header = CSV_COLUMNS.map(([, label]) => csvEscape(label)).join(',');
+  const lines = rows.map(r => CSV_COLUMNS.map(([key]) => csvEscape(r[key])).join(','));
+  const csv = '\uFEFF' + [header, ...lines].join('\r\n'); // BOM for Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `TVL_Supplier_NC_Register_${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 async function saveStage(stage, ncNumber){
