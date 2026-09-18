@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TVL | Supplier NC &amp; 8D Register</title>
+<style>
+  :root{
+    --navy:#1f3864; --navy-dark:#152847; --navy-mid:#2e4d7f;
+    --paper:#f5f6f8; --card:#ffffff; --line:#e1e4ea; --ink:#1c2230; --sub:#6b7280;
+    --amber:#b8860b; --amber-bg:#fdf3d9;
+    --red:#b3261e; --red-bg:#fbe9e7;
+    --green:#1e6b3f; --green-bg:#e6f4ea;
+    --blue-bg:#e8edf7;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,Helvetica,sans-serif;background:var(--paper);color:var(--ink);}
+  header{background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+  header .brand{display:flex;align-items:center;gap:12px;}
+  header .brand .mark{width:34px;height:34px;border:2px solid #fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;letter-spacing:-1px;}
+  header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.2px;}
+  header .tag{font-size:11px;color:#c7d3ea;margin-top:2px;}
+  header button.primary{background:#fff;color:var(--navy);border:none;padding:9px 16px;border-radius:var(--radius);font-weight:600;font-size:13px;cursor:pointer;}
+  header button.primary:hover{background:#e9edf6;}
+
+  main{max-width:1280px;margin:0 auto;padding:22px 24px 60px;}
+
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:22px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px;}
+  .stat .num{font-size:24px;font-weight:700;color:var(--navy);}
+  .stat .lbl{font-size:11.5px;color:var(--sub);margin-top:2px;}
+  .stat.warn .num{color:var(--amber);}
+  .stat.bad .num{color:var(--red);}
+  .stat.good .num{color:var(--green);}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);}
+  .panel-head h2{font-size:14px;margin:0;font-weight:600;}
+  .filters{display:flex;gap:8px;}
+  .filters select, .filters input{font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{text-align:left;background:#fafbfc;color:var(--sub);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:hover{background:#f7f9fc;cursor:pointer;}
+  .nc-num{font-weight:600;color:var(--navy);}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .badge.Containment-Pending{background:var(--blue-bg);color:var(--navy-mid);}
+  .badge.RCA-Pending{background:var(--amber-bg);color:var(--amber);}
+  .badge.CAPA-Pending{background:var(--amber-bg);color:var(--amber);}
+  .badge.CAPA-Overdue{background:var(--red-bg);color:var(--red);}
+  .badge.Closed{background:var(--green-bg);color:var(--green);}
+  .badge.Delayed{background:var(--red-bg);color:var(--red);}
+  .badge.On-Time{background:var(--green-bg);color:var(--green);}
+  .badge.Pending{background:#eef0f3;color:var(--sub);}
+
+  .empty{padding:40px;text-align:center;color:var(--sub);font-size:13px;}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(20,25,40,.5);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:8px;max-width:720px;width:100%;padding:0;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+  .modal-head{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+  .modal-head h3{margin:0;font-size:15px;}
+  .modal-head .close{cursor:pointer;color:var(--sub);font-size:18px;background:none;border:none;}
+  .modal-body{padding:20px 22px;max-height:70vh;overflow:auto;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11.5px;color:var(--sub);margin-bottom:4px;font-weight:600;}
+  .field input, .field select, .field textarea{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:5px;font-size:13px;font-family:inherit;}
+  .field textarea{min-height:56px;resize:vertical;}
+  .span2{grid-column:1/3;}
+  .modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;}
+  .btn{padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;border:1px solid var(--line);background:#fff;cursor:pointer;}
+  .btn.primary{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .btn.primary:hover{background:var(--navy-dark);}
+
+  .stage-block{border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:12px;}
+  .stage-block h4{margin:0 0 4px;font-size:13px;}
+  .stage-block .due{font-size:11.5px;color:var(--sub);margin-bottom:10px;}
+  .stage-block.locked{opacity:.55;pointer-events:none;}
+
+  .msg{font-size:12px;margin-top:8px;}
+  .msg.err{color:var(--red);}
+  .msg.ok{color:var(--green);}
+
+  #configBar{background:var(--amber-bg);border-bottom:1px solid #e6d18a;padding:8px 24px;font-size:12px;color:#6b5410;display:none;}
+  #configBar.show{display:block;}
+</style>
+</head>
+<body>
+
+<div id="configBar">
+  Set your Apps Script Web App URL in <code>API_URL</code> at the bottom of this file before use.
+</div>
+
+<header>
+  <div class="brand">
+    <div class="mark">TVL</div>
+    <div>
+      <h1>Supplier NC &amp; 8D Register</h1>
+      <div class="tag">TVL as Customer — Complaints raised on Suppliers · 2-2-2 Rule Tracking</div>
+    </div>
+  </div>
+  <button class="primary" onclick="openNewModal()">+ Raise New NC</button>
+</header>
+
+<main>
+  <div class="stats" id="statsRow"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Register</h2>
+      <div class="filters">
+        <input id="searchBox" placeholder="Search supplier / part / NC no." oninput="renderTable()">
+        <select id="statusFilter" onchange="renderTable()">
+          <option value="">All statuses</option>
+          <option>Containment Pending</option>
+          <option>RCA Pending</option>
+          <option>CAPA Pending</option>
+          <option>CAPA Overdue</option>
+          <option>Closed</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table id="regTable">
+        <thead>
+          <tr>
+            <th>NC Number</th><th>Date Raised</th><th>Supplier</th><th>Part No.</th>
+            <th>Defect</th><th>Criticality</th><th>D3</th><th>D4</th><th>D5-D8</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="regBody"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg" style="display:none;">No complaints match the current filter.</div>
+    </div>
+  </div>
+</main>
+
+<!-- New complaint modal -->
+<div class="overlay" id="newOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Raise New Supplier NC</h3><button class="close" onclick="closeModal('newOverlay')">&times;</button></div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field"><label>Date Raised</label><input type="date" id="f_dateRaised"></div>
+        <div class="field"><label>Raised By</label><input id="f_raisedBy" placeholder="Your name"></div>
+        <div class="field"><label>Supplier Code</label><input id="f_supplierCode"></div>
+        <div class="field"><label>Supplier Name</label><input id="f_supplierName"></div>
+        <div class="field"><label>Supplier Contact</label><input id="f_supplierContact"></div>
+        <div class="field"><label>PO Number</label><input id="f_poNumber"></div>
+        <div class="field"><label>Part Number</label><input id="f_partNumber"></div>
+        <div class="field"><label>Part Description</label><input id="f_partDescription"></div>
+        <div class="field"><label>Product Family</label><input id="f_productFamily" placeholder="e.g. MCCB"></div>
+        <div class="field"><label>Defect Category</label>
+          <select id="f_defectCategory"><option>Visual</option><option>Dimension</option><option>Packaging</option><option>Material</option><option>Functional</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Criticality</label>
+          <select id="f_criticality"><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
+        </div>
+        <div class="field"><label>Stock Status</label>
+          <select id="f_stockStatus"><option>Quarantine</option><option>Sorting</option><option>Already Adapted</option><option>Scrapped</option><option>NA</option></select>
+        </div>
+        <div class="field"><label>Qty Inspected</label><input type="number" id="f_qtyInspected"></div>
+        <div class="field"><label>Defect Qty</label><input type="number" id="f_defectQty"></div>
+        <div class="field"><label>Total Stock Available</label><input type="number" id="f_totalStock"></div>
+        <div class="field span2"><label>Sub-Defect / Description</label><textarea id="f_subDefect"></textarea></div>
+        <div class="field span2"><label>Nature of Complaint</label><textarea id="f_nature"></textarea></div>
+        <div class="field span2"><label>Remarks</label><textarea id="f_remarks"></textarea></div>
+      </div>
+      <div class="msg" id="newMsg"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('newOverlay')">Cancel</button>
+      <button class="btn primary" onclick="submitNew()">Raise NC</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail / update modal -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="detailTitle">NC Detail</h3><button class="close" onclick="closeModal('detailOverlay')">&times;</button></div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+// ============ CONFIG ============
+// Paste your Apps Script Web App /exec URL here after deployment.
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+// =================================
+
+if (!API_URL || API_URL.indexOf("PASTE_") === 0) {
+  document.getElementById('configBar').classList.add('show');
+}
+
+let allRows = [];
+
+async function apiGet(action, params) {
+  const qs = new URLSearchParams({ action, ...(params||{}) }).toString();
+  const res = await fetch(`${API_URL}?${qs}`);
+  return res.json();
+}
+async function apiPost(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight on Apps Script
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+function statusClass(s){ return (s||'Pending').replace(/\s+/g,'-'); }
+
+async function loadAll() {
+  const [rows, stats] = await Promise.all([apiGet('list'), apiGet('dashboard')]);
+  allRows = Array.isArray(rows) ? rows : [];
+  renderStats(stats);
+  renderTable();
+}
+
+function renderStats(s) {
+  if (!s || s.error) { document.getElementById('statsRow').innerHTML = ''; return; }
+  const cards = [
+    ['Total NCs', s.total, ''],
+    ['Containment Pending', s.containmentPending, ''],
+    ['RCA Pending', s.rcaPending, 'warn'],
+    ['CAPA Pending', s.capaPending, 'warn'],
+    ['CAPA Overdue', s.capaOverdue, 'bad'],
+    ['Closed', s.closed, 'good'],
+  ];
+  document.getElementById('statsRow').innerHTML = cards.map(([lbl,num,cls]) =>
+    `<div class="stat ${cls}"><div class="num">${num ?? 0}</div><div class="lbl">${lbl}</div></div>`
+  ).join('');
+}
+
+function renderTable() {
+  const q = (document.getElementById('searchBox').value || '').toLowerCase();
+  const statusF = document.getElementById('statusFilter').value;
+  const rows = allRows.filter(r => {
+    const hay = `${r.ncNumber} ${r.supplierName} ${r.partNumber}`.toLowerCase();
+    const matchQ = !q || hay.includes(q);
+    const matchS = !statusF || r.overallStatus === statusF;
+    return matchQ && matchS;
+  });
+  const body = document.getElementById('regBody');
+  document.getElementById('emptyMsg').style.display = rows.length ? 'none' : 'block';
+  body.innerHTML = rows.map(r => `
+    <tr onclick='openDetail(${JSON.stringify(r.ncNumber)})'>
+      <td class="nc-num">${r.ncNumber}</td>
+      <td>${r.dateRaised}</td>
+      <td>${r.supplierName}</td>
+      <td>${r.partNumber}</td>
+      <td>${r.defectCategory}</td>
+      <td><span class="badge ${statusClass(r.criticality)}">${r.criticality||''}</span></td>
+      <td><span class="badge ${statusClass(r.d3Status)}">${r.d3Status||'Pending'}</span></td>
+      <td><span class="badge ${statusClass(r.d4Status)}">${r.d4Status||'Pending'}</span></td>
+      <td><span class="badge ${statusClass(r.d5Status)}">${r.d5Status||'Pending'}</span></td>
+      <td><span class="badge ${statusClass(r.overallStatus)}">${r.overallStatus||''}</span></td>
+    </tr>
+  `).join('');
+}
+
+function openNewModal(){
+  document.getElementById('f_dateRaised').value = new Date().toISOString().slice(0,10);
+  document.getElementById('newMsg').textContent = '';
+  document.getElementById('newOverlay').classList.add('open');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+async function submitNew(){
+  const data = {
+    dateRaised: val('f_dateRaised'), raisedBy: val('f_raisedBy'),
+    supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'), supplierContact: val('f_supplierContact'),
+    poNumber: val('f_poNumber'), partNumber: val('f_partNumber'), partDescription: val('f_partDescription'),
+    productFamily: val('f_productFamily'), defectCategory: val('f_defectCategory'),
+    subDefect: val('f_subDefect'), nature: val('f_nature'), criticality: val('f_criticality'),
+    qtyInspected: numVal('f_qtyInspected'), defectQty: numVal('f_defectQty'), totalStock: numVal('f_totalStock'),
+    stockStatus: val('f_stockStatus'), remarks: val('f_remarks')
+  };
+  if (!data.dateRaised || !data.supplierName || !data.partNumber) {
+    document.getElementById('newMsg').className = 'msg err';
+    document.getElementById('newMsg').textContent = 'Date, Supplier Name and Part Number are required.';
+    return;
+  }
+  document.getElementById('newMsg').className = 'msg';
+  document.getElementById('newMsg').textContent = 'Saving...';
+  const res = await apiPost({ action: 'create', data });
+  if (res.error) {
+    document.getElementById('newMsg').className = 'msg err';
+    document.getElementById('newMsg').textContent = res.error;
+    return;
+  }
+  document.getElementById('newMsg').className = 'msg ok';
+  document.getElementById('newMsg').textContent = `Raised as ${res.ncNumber}`;
+  await loadAll();
+  setTimeout(() => closeModal('newOverlay'), 700);
+}
+function val(id){ return document.getElementById(id).value; }
+function numVal(id){ const v = document.getElementById(id).value; return v === '' ? '' : Number(v); }
+
+async function openDetail(ncNumber){
+  const r = allRows.find(x => x.ncNumber === ncNumber);
+  if (!r) return;
+  document.getElementById('detailTitle').textContent = `${r.ncNumber} — ${r.supplierName}`;
+  document.getElementById('detailBody').innerHTML = stageForm('d3', 'D3 — Containment Action (due within 2 days)', r, 'd3Action', 'd3Due', 'd3Actual', 'd3Status')
+    + stageForm('d4', 'D4 — Root Cause Analysis (due within 2 weeks)', r, 'd4Rca', 'd4Due', 'd4Actual', 'd4Status', !r.d3Actual)
+    + stageForm('d5', 'D5–D8 — Corrective / Preventive Action (due within 2 months)', r, 'd5Capa', 'd5Due', 'd5Actual', 'd5Status', !r.d4Actual);
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function stageForm(stage, title, r, actionKey, dueKey, actualKey, statusKey, locked){
+  return `
+  <div class="stage-block ${locked ? 'locked' : ''}">
+    <h4>${title}</h4>
+    <div class="due">Due: ${r[dueKey] || '—'} &nbsp;·&nbsp; Current status:
+      <span class="badge ${statusClass(r[statusKey])}">${r[statusKey] || 'Pending'}</span>
+      ${locked ? ' &nbsp;(complete the previous stage first)' : ''}
+    </div>
+    <div class="field"><label>${stage === 'd3' ? 'Containment action taken' : stage === 'd4' ? 'Root cause (5 Why / Fishbone)' : 'Corrective & preventive actions'}</label>
+      <textarea id="${stage}_action">${r[actionKey] || ''}</textarea>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Actual completion date</label><input type="date" id="${stage}_date" value="${toIso(r[actualKey])}"></div>
+      <div class="field" style="display:flex;align-items:flex-end;">
+        <button class="btn primary" style="width:100%;" onclick="saveStage('${stage}','${r.ncNumber}')">Save ${stage.toUpperCase()}</button>
+      </div>
+    </div>
+    <div class="msg" id="${stage}_msg"></div>
+  </div>`;
+}
+
+function toIso(dmy){
+  if (!dmy) return '';
+  const parts = String(dmy).split(/[.\/-]/);
+  if (parts.length !== 3) return '';
+  // Register displays dates as DD.MM.YYYY
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+async function saveStage(stage, ncNumber){
+  const actionText = document.getElementById(`${stage}_action`).value;
+  const actualDate = document.getElementById(`${stage}_date`).value;
+  const msg = document.getElementById(`${stage}_msg`);
+  msg.className = 'msg'; msg.textContent = 'Saving...';
+  const actionMap = { d3: 'updateD3', d4: 'updateD4', d5: 'updateD5' };
+  const res = await apiPost({ action: actionMap[stage], ncNumber, data: { actionText, actualDate } });
+  if (res.error) { msg.className = 'msg err'; msg.textContent = res.error; return; }
+  msg.className = 'msg ok'; msg.textContent = 'Saved.';
+  await loadAll();
+  openDetail(ncNumber); // refresh with updated due/status + unlock next stage
+}
+
+loadAll();
+</script>
+</body>
+</html>
