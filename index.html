@@ -35,7 +35,23 @@
 
   main{max-width:1280px;margin:0 auto;padding:22px 24px 60px;}
 
-  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:22px;}
+  .stats{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:22px;}
+
+  .rule-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+  .rule-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:var(--radius);padding:14px 16px;}
+  .rule-card .rc-time{font-size:19px;font-weight:700;color:var(--navy);}
+  .rule-card .rc-d{font-size:11.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+  .rule-card .rc-desc{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.4;}
+  .rule-card.d4{border-left-color:var(--amber);}
+  .rule-card.d4 .rc-time{color:var(--amber);}
+  .rule-card.d5{border-left-color:var(--green);}
+  .rule-card.d5 .rc-time{color:var(--green);}
+
+  .dl-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;white-space:nowrap;}
+  .dl-badge.overdue{background:var(--red-bg);color:var(--red);}
+  .dl-badge.soon{background:var(--amber-bg);color:var(--amber);}
+  .dl-badge.ok{background:var(--green-bg);color:var(--green);}
+  .dl-badge.closed{background:#eef0f3;color:var(--sub);}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px;}
   .stat .num{font-size:24px;font-weight:700;color:var(--navy);}
   .stat .lbl{font-size:11.5px;color:var(--sub);margin-top:2px;}
@@ -117,6 +133,24 @@
 </header>
 
 <main>
+  <div class="rule-strip">
+    <div class="rule-card d3">
+      <div class="rc-time">2 Days</div>
+      <div class="rc-d">D3 — Containment</div>
+      <div class="rc-desc">Isolate and quarantine all suspect/non-conforming stock across the supply chain so nothing further reaches TVL's line.</div>
+    </div>
+    <div class="rule-card d4">
+      <div class="rc-time">2 Weeks</div>
+      <div class="rc-d">D4 — Root Cause</div>
+      <div class="rc-desc">Complete 5-Why / Fishbone investigation and submit the Root Cause Analysis to TVL.</div>
+    </div>
+    <div class="rule-card d5">
+      <div class="rc-time">2 Months</div>
+      <div class="rc-d">D5–D8 — CAPA Closure</div>
+      <div class="rc-desc">Implement and verify permanent corrective & preventive actions; update control plans/PFMEA; close the 8D.</div>
+    </div>
+  </div>
+
   <div class="stats" id="statsRow"></div>
 
   <div class="panel">
@@ -139,7 +173,7 @@
         <thead>
           <tr>
             <th>NC Number</th><th>Date Raised</th><th>Supplier</th><th>Part No.</th>
-            <th>Defect</th><th>Criticality</th><th>D3</th><th>D4</th><th>D5-D8</th><th>Status</th>
+            <th>Defect</th><th>Criticality</th><th>D3</th><th>D4</th><th>D5-D8</th><th>Status</th><th>Next Deadline</th>
           </tr>
         </thead>
         <tbody id="regBody"></tbody>
@@ -254,10 +288,34 @@ async function apiPost(payload) {
 
 function statusClass(s){ return (s||'Pending').replace(/\s+/g,'-'); }
 
+function activeDueDate(r){
+  if (r.overallStatus === 'Containment Pending') return r.d3Due;
+  if (r.overallStatus === 'RCA Pending') return r.d4Due;
+  if (r.overallStatus === 'CAPA Pending' || r.overallStatus === 'CAPA Overdue') return r.d5Due;
+  return null; // Closed
+}
+function daysLeftFor(r){
+  const dueStr = activeDueDate(r);
+  if (!dueStr) return null;
+  const due = new Date(toIso(dueStr));
+  if (isNaN(due)) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.ceil((due - today) / 86400000);
+}
+function deadlineBadge(r){
+  if (r.overallStatus === 'Closed') return '<span class="dl-badge closed">Closed</span>';
+  const days = daysLeftFor(r);
+  if (days === null) return '—';
+  if (days < 0) return `<span class="dl-badge overdue">Overdue ${Math.abs(days)}d</span>`;
+  if (days <= 1) return `<span class="dl-badge soon">Due ${days === 0 ? 'today' : 'in 1d'}</span>`;
+  return `<span class="dl-badge ok">${days}d left</span>`;
+}
+
 async function loadAll() {
   const [rows, stats] = await Promise.all([apiGet('list'), apiGet('dashboard')]);
   allRows = Array.isArray(rows) ? rows : [];
-  renderStats(stats);
+  const dueSoon = allRows.filter(r => r.overallStatus !== 'Closed' && daysLeftFor(r) !== null && daysLeftFor(r) <= 1).length;
+  renderStats({ ...stats, dueSoon });
   renderTable();
 }
 
@@ -268,6 +326,7 @@ function renderStats(s) {
     ['Containment Pending', s.containmentPending, ''],
     ['RCA Pending', s.rcaPending, 'warn'],
     ['CAPA Pending', s.capaPending, 'warn'],
+    ['Due Soon (≤1d)', s.dueSoon, 'bad'],
     ['CAPA Overdue', s.capaOverdue, 'bad'],
     ['Closed', s.closed, 'good'],
   ];
@@ -299,6 +358,7 @@ function renderTable() {
       <td><span class="badge ${statusClass(r.d4Status)}">${r.d4Status||'Pending'}</span></td>
       <td><span class="badge ${statusClass(r.d5Status)}">${r.d5Status||'Pending'}</span></td>
       <td><span class="badge ${statusClass(r.overallStatus)}">${r.overallStatus||''}</span></td>
+      <td>${deadlineBadge(r)}</td>
     </tr>
   `).join('');
 }
