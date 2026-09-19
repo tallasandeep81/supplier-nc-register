@@ -175,7 +175,7 @@
       <table id="regTable">
         <thead>
           <tr>
-            <th>NC Number</th><th>Date Raised</th><th>Supplier</th><th>Part No.</th>
+            <th>NC Number</th><th>Date Raised</th><th>Supplier</th><th>Part No.</th><th>Component</th>
             <th>Defect</th><th>Criticality</th><th>D3</th><th>D4</th><th>D5-D8</th><th>Status</th><th>Next Deadline</th>
           </tr>
         </thead>
@@ -354,7 +354,7 @@ function currentFilteredRows(){
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
   const statusF = document.getElementById('statusFilter').value;
   return allRows.filter(r => {
-    const hay = `${r.ncNumber} ${r.supplierName} ${r.partNumber}`.toLowerCase();
+    const hay = `${r.ncNumber} ${r.supplierName} ${r.partNumber} ${r.partDescription}`.toLowerCase();
     const matchQ = !q || hay.includes(q);
     const matchS = !statusF || r.overallStatus === statusF;
     return matchQ && matchS;
@@ -371,6 +371,7 @@ function renderTable() {
       <td>${r.dateRaised}</td>
       <td>${r.supplierName}</td>
       <td>${r.partNumber}</td>
+      <td>${r.partDescription||''}</td>
       <td>${r.defectCategory}</td>
       <td><span class="badge ${statusClass(r.criticality)}">${r.criticality||''}</span></td>
       <td><span class="badge ${statusClass(r.d3Status)}">${r.d3Status||'Pending'}</span>${dueMini(r.d3Due)}</td>
@@ -470,13 +471,13 @@ async function openDetail(ncNumber){
       ${r.traceability ? `<div class="due" style="margin-top:8px;"><strong>Traceability:</strong> ${r.traceability}</div>` : ''}
     </div>` : '';
   document.getElementById('detailBody').innerHTML = photoRow
-    + stageForm('d3', 'D3 — Containment Action (due within 2 days)', r, 'd3Action', 'd3Due', 'd3Actual', 'd3Status')
-    + stageForm('d4', 'D4 — Root Cause Analysis (due within 2 weeks)', r, 'd4Rca', 'd4Due', 'd4Actual', 'd4Status', !r.d3Actual)
-    + stageForm('d5', 'D5–D8 — Corrective / Preventive Action (due within 2 months)', r, 'd5Capa', 'd5Due', 'd5Actual', 'd5Status', !r.d4Actual);
+    + stageForm('d3', 'D3 — Containment Action (due within 2 days)', r, 'd3Action', 'd3Due', 'd3Actual', 'd3Status', 'd3Doc')
+    + stageForm('d4', 'D4 — Root Cause Analysis (due within 2 weeks)', r, 'd4Rca', 'd4Due', 'd4Actual', 'd4Status', 'd4Doc', !r.d3Actual)
+    + stageForm('d5', 'D5–D8 — Corrective / Preventive Action (due within 2 months)', r, 'd5Capa', 'd5Due', 'd5Actual', 'd5Status', 'd5Doc', !r.d4Actual);
   document.getElementById('detailOverlay').classList.add('open');
 }
 
-function stageForm(stage, title, r, actionKey, dueKey, actualKey, statusKey, locked){
+function stageForm(stage, title, r, actionKey, dueKey, actualKey, statusKey, docKey, locked){
   return `
   <div class="stage-block ${locked ? 'locked' : ''}">
     <h4>${title}</h4>
@@ -492,6 +493,11 @@ function stageForm(stage, title, r, actionKey, dueKey, actualKey, statusKey, loc
       <div class="field" style="display:flex;align-items:flex-end;">
         <button class="btn primary" style="width:100%;" onclick="saveStage('${stage}','${r.ncNumber}')">Save ${stage.toUpperCase()}</button>
       </div>
+    </div>
+    <div class="field">
+      <label>Supporting document (RCA report, CAPA evidence, photos, etc.)</label>
+      <input type="file" id="${stage}_docfile">
+      ${r[docKey] ? `<div class="due" style="margin-top:6px;">Current: <a href="${r[docKey]}" target="_blank">view uploaded document</a></div>` : ''}
     </div>
     <div class="msg" id="${stage}_msg"></div>
   </div>`;
@@ -555,12 +561,20 @@ async function deleteCurrentNc(){
   await loadAll();
 }
 
-async function saveStage(stage, ncNumber){  const actionText = document.getElementById(`${stage}_action`).value;
+async function saveStage(stage, ncNumber){
+  const actionText = document.getElementById(`${stage}_action`).value;
   const actualDate = document.getElementById(`${stage}_date`).value;
+  const docFile = document.getElementById(`${stage}_docfile`).files[0];
   const msg = document.getElementById(`${stage}_msg`);
-  msg.className = 'msg'; msg.textContent = 'Saving...';
+  msg.className = 'msg'; msg.textContent = docFile ? 'Uploading document & saving...' : 'Saving...';
   const actionMap = { d3: 'updateD3', d4: 'updateD4', d5: 'updateD5' };
-  const res = await apiPost({ action: actionMap[stage], ncNumber, data: { actionText, actualDate } });
+  const payload = { action: actionMap[stage], ncNumber, data: { actionText, actualDate } };
+  if (docFile) {
+    payload.data.docBase64 = await fileToBase64(docFile);
+    payload.data.docMime = docFile.type;
+    payload.data.docName = docFile.name;
+  }
+  const res = await apiPost(payload);
   if (res.error) { msg.className = 'msg err'; msg.textContent = res.error; return; }
   msg.className = 'msg ok'; msg.textContent = 'Saved.';
   await loadAll();
