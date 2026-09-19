@@ -212,8 +212,8 @@
         <div class="field"><label>Part Number</label><input id="f_partNumber"></div>
         <div class="field"><label>Part Description</label><input id="f_partDescription"></div>
         <div class="field"><label>Product Family</label><input id="f_productFamily" placeholder="e.g. MCCB"></div>
-        <div class="field"><label>Defect Category</label>
-          <select id="f_defectCategory"><option>Visual</option><option>Dimension</option><option>Packaging</option><option>Material</option><option>Functional</option><option>Other</option></select>
+        <div class="field"><label>Defect Category (Ctrl/Cmd-click to select multiple)</label>
+          <select id="f_defectCategory" multiple size="6"><option>Visual</option><option>Dimension</option><option>Packaging</option><option>Material</option><option>Functional</option><option>Other</option></select>
         </div>
         <div class="field"><label>Criticality</label>
           <select id="f_criticality"><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
@@ -289,8 +289,8 @@
         <div class="field"><label>Part Number</label><input id="e_partNumber"></div>
         <div class="field"><label>Component / Part Description</label><input id="e_partDescription"></div>
         <div class="field"><label>Product Family</label><input id="e_productFamily"></div>
-        <div class="field"><label>Defect Category</label>
-          <select id="e_defectCategory"><option>Visual</option><option>Dimension</option><option>Packaging</option><option>Material</option><option>Functional</option><option>Other</option></select>
+        <div class="field"><label>Defect Category (Ctrl/Cmd-click to select multiple)</label>
+          <select id="e_defectCategory" multiple size="6"><option>Visual</option><option>Dimension</option><option>Packaging</option><option>Material</option><option>Functional</option><option>Other</option></select>
         </div>
         <div class="field"><label>Criticality</label>
           <select id="e_criticality"><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
@@ -506,6 +506,7 @@ function openNewModal(){
   document.getElementById('f_okImage').value = '';
   document.getElementById('f_ngImage').value = '';
   document.getElementById('f_inspectionReports').value = '';
+  setMultiVal('f_defectCategory', '');
   document.getElementById('newMsg').textContent = '';
   document.getElementById('newOverlay').classList.add('open');
 }
@@ -543,7 +544,7 @@ async function submitNew(){
     contactPerson: val('f_contactPerson'), contactMobile: val('f_contactMobile'), contactEmail: val('f_contactEmail'),
     contactPerson2: val('f_contactPerson2'), contactMobile2: val('f_contactMobile2'),
     poNumber: val('f_poNumber'), partNumber: val('f_partNumber'), partDescription: val('f_partDescription'),
-    productFamily: val('f_productFamily'), defectCategory: val('f_defectCategory'),
+    productFamily: val('f_productFamily'), defectCategory: getMultiVal('f_defectCategory'),
     subDefect: val('f_subDefect'), nature: val('f_nature'), criticality: val('f_criticality'),
     qtyInspected: numVal('f_qtyInspected'), defectQty: numVal('f_defectQty'), totalStock: numVal('f_totalStock'),
     stockStatus: val('f_stockStatus'), remarks: val('f_remarks'), traceability: val('f_traceability')
@@ -576,6 +577,12 @@ async function submitNew(){
 }
 function val(id){ return document.getElementById(id).value; }
 function numVal(id){ const v = document.getElementById(id).value; return v === '' ? '' : Number(v); }
+function getMultiVal(id){ return [...document.getElementById(id).selectedOptions].map(o => o.value).join(', '); }
+function setMultiVal(id, commaStr){
+  const parts = (commaStr || '').split(',').map(s => s.trim()).filter(Boolean);
+  const el = document.getElementById(id);
+  [...el.options].forEach(o => { o.selected = parts.includes(o.value); });
+}
 
 let currentDetailNc = null;
 
@@ -714,7 +721,7 @@ function openEditModal(){
   document.getElementById('e_partNumber').value = r.partNumber || '';
   document.getElementById('e_partDescription').value = r.partDescription || '';
   document.getElementById('e_productFamily').value = r.productFamily || '';
-  document.getElementById('e_defectCategory').value = r.defectCategory || 'Visual';
+  setMultiVal('e_defectCategory', r.defectCategory);
   document.getElementById('e_criticality').value = r.criticality || 'MEDIUM';
   document.getElementById('e_stockStatus').value = r.stockStatus || 'NA';
   document.getElementById('e_qtyInspected').value = r.qtyInspected || '';
@@ -740,7 +747,7 @@ async function submitEdit(){
     contactPerson: val('e_contactPerson'), contactMobile: val('e_contactMobile'), contactEmail: val('e_contactEmail'),
     contactPerson2: val('e_contactPerson2'), contactMobile2: val('e_contactMobile2'),
     poNumber: val('e_poNumber'), partNumber: val('e_partNumber'), partDescription: val('e_partDescription'),
-    productFamily: val('e_productFamily'), defectCategory: val('e_defectCategory'),
+    productFamily: val('e_productFamily'), defectCategory: getMultiVal('e_defectCategory'),
     subDefect: val('e_subDefect'), nature: val('e_nature'), criticality: val('e_criticality'),
     qtyInspected: numVal('e_qtyInspected'), defectQty: numVal('e_defectQty'), totalStock: numVal('e_totalStock'),
     stockStatus: val('e_stockStatus'), remarks: val('e_remarks'), traceability: val('e_traceability')
