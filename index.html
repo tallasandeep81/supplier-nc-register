@@ -453,6 +453,8 @@ function renderTable() {
 
 function openNewModal(){
   document.getElementById('f_dateRaised').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f_okImage').value = '';
+  document.getElementById('f_ngImage').value = '';
   document.getElementById('newMsg').textContent = '';
   document.getElementById('newOverlay').classList.add('open');
 }
@@ -632,6 +634,8 @@ function exportCSV(){
 function openEditModal(){
   const r = allRows.find(x => x.ncNumber === currentDetailNc);
   if (!r) return;
+  document.getElementById('e_okImage').value = '';
+  document.getElementById('e_ngImage').value = '';
   document.getElementById('e_dateRaised').value = toIso(r.dateRaised);
   document.getElementById('e_raisedBy').value = r.raisedBy || '';
   document.getElementById('e_supplierCode').value = r.supplierCode || '';
