@@ -230,6 +230,7 @@
         <div class="field"><label>OK / Reference Sample Photo(s)</label><input type="file" accept="image/*" multiple id="f_okImage"></div>
         <div class="field"><label>NOT OK / Defect Photo(s)</label><input type="file" accept="image/*" multiple id="f_ngImage"></div>
         <div class="field span2"><label>Inspection Report(s) (PDF, Excel, images — multiple allowed)</label><input type="file" multiple id="f_inspectionReports"></div>
+        <div class="field span2"><label>Video Clip(s) (any format)</label><input type="file" accept="video/*" multiple id="f_videos"></div>
         <div class="field span2"><label>Remarks</label><textarea id="f_remarks"></textarea></div>
       </div>
       <div class="msg" id="newMsg"></div>
@@ -307,6 +308,7 @@
         <div class="field"><label>OK / Reference Photo(s) (adds to existing)</label><input type="file" accept="image/*" multiple id="e_okImage"></div>
         <div class="field"><label>NOT OK / Defect Photo(s) (adds to existing)</label><input type="file" accept="image/*" multiple id="e_ngImage"></div>
         <div class="field span2"><label>Inspection Report(s) (adds to existing — PDF, Excel, images)</label><input type="file" multiple id="e_inspectionReports"></div>
+        <div class="field span2"><label>Video Clip(s) (adds to existing — any format)</label><input type="file" accept="video/*" multiple id="e_videos"></div>
         <div class="field span2"><label>Remarks</label><textarea id="e_remarks"></textarea></div>
       </div>
       <div class="msg" id="editMsg"></div>
@@ -506,6 +508,7 @@ function openNewModal(){
   document.getElementById('f_okImage').value = '';
   document.getElementById('f_ngImage').value = '';
   document.getElementById('f_inspectionReports').value = '';
+  document.getElementById('f_videos').value = '';
   setMultiVal('f_defectCategory', '');
   document.getElementById('newMsg').textContent = '';
   document.getElementById('newOverlay').classList.add('open');
@@ -538,6 +541,7 @@ async function submitNew(){
   const okFiles = document.getElementById('f_okImage').files;
   const ngFiles = document.getElementById('f_ngImage').files;
   const reportFiles = document.getElementById('f_inspectionReports').files;
+  const videoFiles = document.getElementById('f_videos').files;
   const data = {
     dateRaised: val('f_dateRaised'), raisedBy: val('f_raisedBy'),
     supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'),
@@ -555,12 +559,13 @@ async function submitNew(){
     return;
   }
   document.getElementById('newMsg').className = 'msg';
-  document.getElementById('newMsg').textContent = (okFiles.length || ngFiles.length || reportFiles.length) ? 'Uploading file(s) & saving...' : 'Saving...';
+  document.getElementById('newMsg').textContent = (okFiles.length || ngFiles.length || reportFiles.length || videoFiles.length) ? 'Uploading file(s) & saving...' : 'Saving...';
   btn.disabled = true;
   try {
     if (okFiles.length) data.okImages = await filesToPayload(okFiles);
     if (ngFiles.length) data.ngImages = await filesToPayload(ngFiles);
     if (reportFiles.length) data.inspectionReports = await filesToPayload(reportFiles);
+    if (videoFiles.length) data.videos = await filesToPayload(videoFiles);
     const res = await apiPost({ action: 'create', data });
     if (res.error) {
       document.getElementById('newMsg').className = 'msg err';
@@ -600,7 +605,8 @@ async function openDetail(ncNumber){
   const okUrls = splitUrls(r.okImage);
   const ngUrls = splitUrls(r.ngImage);
   const reportUrls = splitUrls(r.inspectionReport);
-  const photoRow = (okUrls.length || ngUrls.length || reportUrls.length || r.traceability) ? `
+  const videoUrls = splitUrls(r.video);
+  const photoRow = (okUrls.length || ngUrls.length || reportUrls.length || videoUrls.length || r.traceability) ? `
     <div class="stage-block">
       <h4>Reference</h4>
       <div class="grid2">
@@ -615,6 +621,9 @@ async function openDetail(ncNumber){
       </div>
       ${reportUrls.length ? `<div class="field" style="margin-top:10px;"><label>Inspection Report(s)</label>
         <div>${reportUrls.map((u,i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 10px 2px 0;"><a href="${u}" target="_blank">📄 Report ${i+1}</a><button onclick="deleteFileConfirm('${r.ncNumber}','inspectionReport','${u.replace(/'/g,"\\'")}')" title="Delete this report" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;">✕</button></span>`).join('')}</div>
+      </div>` : ''}
+      ${videoUrls.length ? `<div class="field" style="margin-top:10px;"><label>Video Clip(s)</label>
+        <div>${videoUrls.map((u,i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 10px 2px 0;"><a href="${u}" target="_blank">🎥 Video ${i+1}</a><button onclick="deleteFileConfirm('${r.ncNumber}','video','${u.replace(/'/g,"\\'")}')" title="Delete this video" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;">✕</button></span>`).join('')}</div>
       </div>` : ''}
       ${r.traceability ? `<div class="due" style="margin-top:8px;"><strong>Traceability:</strong> ${r.traceability}</div>` : ''}
     </div>` : '';
@@ -675,7 +684,7 @@ const CSV_COLUMNS = [
   ['horizontalDeploy', 'Horizontal Deployment'], ['effectiveness', 'Effectiveness Monitoring'],
   ['overallStatus', 'Overall NC Status'], ['remarks', 'Remarks'],
   ['traceability', 'Traceability'], ['okImage', 'OK Image URL'], ['ngImage', 'NG Image URL'],
-  ['inspectionReport', 'Inspection Report URL(s)']
+  ['inspectionReport', 'Inspection Report URL(s)'], ['video', 'Video URL(s)']
 ];
 
 function csvEscape(val){
@@ -708,6 +717,7 @@ function openEditModal(){
   document.getElementById('e_okImage').value = '';
   document.getElementById('e_ngImage').value = '';
   document.getElementById('e_inspectionReports').value = '';
+  document.getElementById('e_videos').value = '';
   document.getElementById('e_dateRaised').value = toIso(r.dateRaised);
   document.getElementById('e_raisedBy').value = r.raisedBy || '';
   document.getElementById('e_supplierCode').value = r.supplierCode || '';
@@ -741,6 +751,7 @@ async function submitEdit(){
   const okFiles = document.getElementById('e_okImage').files;
   const ngFiles = document.getElementById('e_ngImage').files;
   const reportFiles = document.getElementById('e_inspectionReports').files;
+  const videoFiles = document.getElementById('e_videos').files;
   const data = {
     dateRaised: val('e_dateRaised'), raisedBy: val('e_raisedBy'),
     supplierCode: val('e_supplierCode'), supplierName: val('e_supplierName'),
@@ -753,12 +764,13 @@ async function submitEdit(){
     stockStatus: val('e_stockStatus'), remarks: val('e_remarks'), traceability: val('e_traceability')
   };
   const msg = document.getElementById('editMsg');
-  msg.className = 'msg'; msg.textContent = (okFiles.length || ngFiles.length || reportFiles.length) ? 'Uploading file(s) & saving...' : 'Saving...';
+  msg.className = 'msg'; msg.textContent = (okFiles.length || ngFiles.length || reportFiles.length || videoFiles.length) ? 'Uploading file(s) & saving...' : 'Saving...';
   btn.disabled = true;
   try {
     if (okFiles.length) data.okImages = await filesToPayload(okFiles);
     if (ngFiles.length) data.ngImages = await filesToPayload(ngFiles);
     if (reportFiles.length) data.inspectionReports = await filesToPayload(reportFiles);
+    if (videoFiles.length) data.videos = await filesToPayload(videoFiles);
     const res = await apiPost({ action: 'update', ncNumber: currentDetailNc, data });
     if (res.error) { msg.className = 'msg err'; msg.textContent = res.error; return; }
     msg.className = 'msg ok'; msg.textContent = 'Saved.';
@@ -931,6 +943,7 @@ function openReport(ncNumber){
   ${r.remarks ? `<p><strong>Remarks:</strong> ${esc(r.remarks)}</p>` : ''}
 
   ${splitUrls(r.inspectionReport).length ? `<p><strong>Inspection Reports:</strong> ${splitUrls(r.inspectionReport).map((u,i)=>`<a href="${u}">Report ${i+1}</a>`).join(', ')}</p>` : ''}
+  ${splitUrls(r.video).length ? `<p><strong>Video Clips:</strong> ${splitUrls(r.video).map((u,i)=>`<a href="${u}">Video ${i+1}</a>`).join(', ')}</p>` : ''}
 
   <div class="sign">
     <div style="font-weight:700;color:#1f3864;margin-bottom:4px;">Complaint Raised By</div>
