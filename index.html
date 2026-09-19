@@ -196,7 +196,6 @@
         <div class="field"><label>Raised By</label><input id="f_raisedBy" placeholder="Your name"></div>
         <div class="field"><label>Supplier Code</label><input id="f_supplierCode"></div>
         <div class="field"><label>Supplier Name</label><input id="f_supplierName"></div>
-        <div class="field"><label>Supplier Contact</label><input id="f_supplierContact"></div>
         <div class="field"><label>Contact Person Name</label><input id="f_contactPerson"></div>
         <div class="field"><label>Mobile Number</label><input id="f_contactMobile"></div>
         <div class="field"><label>Email ID</label><input type="email" id="f_contactEmail"></div>
@@ -221,6 +220,7 @@
         <div class="field span2"><label>Traceability (Date Code / Batch / Docket No.)</label><input id="f_traceability" placeholder="e.g. Docket HYD93400793, D.C No. 104"></div>
         <div class="field"><label>OK / Reference Sample Photo</label><input type="file" accept="image/*" id="f_okImage"></div>
         <div class="field"><label>NOT OK / Defect Photo</label><input type="file" accept="image/*" id="f_ngImage"></div>
+        <div class="field span2"><label>Complaint / Supporting Photo (label, batch, packaging, etc.)</label><input type="file" accept="image/*" id="f_complaintImage"></div>
         <div class="field span2"><label>Remarks</label><textarea id="f_remarks"></textarea></div>
       </div>
       <div class="msg" id="newMsg"></div>
@@ -271,7 +271,6 @@
         <div class="field"><label>Raised By</label><input id="e_raisedBy"></div>
         <div class="field"><label>Supplier Code</label><input id="e_supplierCode"></div>
         <div class="field"><label>Supplier Name</label><input id="e_supplierName"></div>
-        <div class="field"><label>Supplier Contact</label><input id="e_supplierContact"></div>
         <div class="field"><label>Contact Person Name</label><input id="e_contactPerson"></div>
         <div class="field"><label>Mobile Number</label><input id="e_contactMobile"></div>
         <div class="field"><label>Email ID</label><input type="email" id="e_contactEmail"></div>
@@ -294,6 +293,9 @@
         <div class="field span2"><label>Sub-Defect / Description</label><textarea id="e_subDefect"></textarea></div>
         <div class="field span2"><label>Nature of Complaint</label><textarea id="e_nature"></textarea></div>
         <div class="field span2"><label>Traceability</label><input id="e_traceability"></div>
+        <div class="field"><label>OK / Reference Photo (leave blank to keep existing)</label><input type="file" accept="image/*" id="e_okImage"></div>
+        <div class="field"><label>NOT OK / Defect Photo (leave blank to keep existing)</label><input type="file" accept="image/*" id="e_ngImage"></div>
+        <div class="field span2"><label>Complaint / Supporting Photo (leave blank to keep existing)</label><input type="file" accept="image/*" id="e_complaintImage"></div>
         <div class="field span2"><label>Remarks</label><textarea id="e_remarks"></textarea></div>
       </div>
       <div class="msg" id="editMsg"></div>
@@ -415,7 +417,7 @@ function renderTable() {
   document.getElementById('emptyMsg').style.display = rows.length ? 'none' : 'block';
   body.innerHTML = rows.map(r => `
     <tr onclick='openDetail(${JSON.stringify(r.ncNumber)})'>
-      <td class="nc-num">${r.ncNumber} ${(r.okImage || r.ngImage) ? '<span title="Photos attached">📷</span>' : ''}</td>
+      <td class="nc-num">${r.ncNumber} ${(r.okImage || r.ngImage || r.complaintImage) ? '<span title="Photos attached">📷</span>' : ''}</td>
       <td>${r.dateRaised}</td>
       <td>${r.supplierName}</td>
       <td>${r.partNumber}</td>
@@ -453,9 +455,10 @@ async function submitNew(){
   const btn = document.getElementById('submitNewBtn');
   const okFile = document.getElementById('f_okImage').files[0];
   const ngFile = document.getElementById('f_ngImage').files[0];
+  const complaintFile = document.getElementById('f_complaintImage').files[0];
   const data = {
     dateRaised: val('f_dateRaised'), raisedBy: val('f_raisedBy'),
-    supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'), supplierContact: val('f_supplierContact'),
+    supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'),
     contactPerson: val('f_contactPerson'), contactMobile: val('f_contactMobile'), contactEmail: val('f_contactEmail'),
     poNumber: val('f_poNumber'), partNumber: val('f_partNumber'), partDescription: val('f_partDescription'),
     productFamily: val('f_productFamily'), defectCategory: val('f_defectCategory'),
@@ -469,7 +472,7 @@ async function submitNew(){
     return;
   }
   document.getElementById('newMsg').className = 'msg';
-  document.getElementById('newMsg').textContent = okFile || ngFile ? 'Uploading photo(s) & saving...' : 'Saving...';
+  document.getElementById('newMsg').textContent = (okFile || ngFile || complaintFile) ? 'Uploading photo(s) & saving...' : 'Saving...';
   btn.disabled = true;
   try {
     if (okFile) {
@@ -479,6 +482,10 @@ async function submitNew(){
     if (ngFile) {
       const b64 = await fileToBase64(ngFile);
       data.ngImageBase64 = b64; data.ngImageMime = ngFile.type; data.ngImageName = ngFile.name;
+    }
+    if (complaintFile) {
+      const b64 = await fileToBase64(complaintFile);
+      data.complaintImageBase64 = b64; data.complaintImageMime = complaintFile.type; data.complaintImageName = complaintFile.name;
     }
     const res = await apiPost({ action: 'create', data });
     if (res.error) {
@@ -505,8 +512,10 @@ async function openDetail(ncNumber){
   currentDetailNc = ncNumber;
   document.getElementById('detailTitle').textContent = `${r.ncNumber} — ${r.supplierName}`;
   const contactBits = [r.contactPerson, r.contactMobile, r.contactEmail].filter(Boolean);
-  const contactLine = contactBits.length ? `<div class="due" style="margin-bottom:12px;">📇 ${contactBits.join(' · ')}</div>` : '';
-  const photoRow = (r.okImage || r.ngImage || r.traceability) ? `
+  const contactLine = contactBits.length
+    ? `<div class="due" style="margin-bottom:12px;">📇 ${contactBits.join(' · ')}</div>`
+    : (r.supplierContact ? `<div class="due" style="margin-bottom:12px;">📇 ${r.supplierContact}</div>` : '');
+  const photoRow = (r.okImage || r.ngImage || r.complaintImage || r.traceability) ? `
     <div class="stage-block">
       <h4>Reference</h4>
       <div class="grid2">
@@ -518,6 +527,10 @@ async function openDetail(ncNumber){
           <div class="field"><label>NOT OK / Defect</label></div>
           ${r.ngImage ? `<a href="${r.ngImage}" target="_blank"><img src="${r.ngImage}" style="width:100%;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;"></a>` : '<div class="msg" style="color:var(--sub);">No photo attached</div>'}
         </div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="field"><label>Complaint / Supporting Photo</label></div>
+        ${r.complaintImage ? `<a href="${r.complaintImage}" target="_blank"><img src="${r.complaintImage}" style="max-width:100%;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;"></a>` : '<div class="msg" style="color:var(--sub);">No photo attached</div>'}
       </div>
       ${r.traceability ? `<div class="due" style="margin-top:8px;"><strong>Traceability:</strong> ${r.traceability}</div>` : ''}
     </div>` : '';
@@ -576,7 +589,8 @@ const CSV_COLUMNS = [
   ['d5Capa', 'D5-D8 - CAPA'], ['d5Due', 'D5-D8 Due Date'], ['d5Actual', 'D5-D8 Actual Date'], ['d5Status', 'D5-D8 Status'],
   ['horizontalDeploy', 'Horizontal Deployment'], ['effectiveness', 'Effectiveness Monitoring'],
   ['overallStatus', 'Overall NC Status'], ['remarks', 'Remarks'],
-  ['traceability', 'Traceability'], ['okImage', 'OK Image URL'], ['ngImage', 'NG Image URL']
+  ['traceability', 'Traceability'], ['okImage', 'OK Image URL'], ['ngImage', 'NG Image URL'],
+  ['complaintImage', 'Complaint Photo URL']
 ];
 
 function csvEscape(val){
@@ -610,7 +624,6 @@ function openEditModal(){
   document.getElementById('e_raisedBy').value = r.raisedBy || '';
   document.getElementById('e_supplierCode').value = r.supplierCode || '';
   document.getElementById('e_supplierName').value = r.supplierName || '';
-  document.getElementById('e_supplierContact').value = r.supplierContact || '';
   document.getElementById('e_contactPerson').value = r.contactPerson || '';
   document.getElementById('e_contactMobile').value = r.contactMobile || '';
   document.getElementById('e_contactEmail').value = r.contactEmail || '';
@@ -634,9 +647,12 @@ function openEditModal(){
 
 async function submitEdit(){
   const btn = document.getElementById('submitEditBtn');
+  const okFile = document.getElementById('e_okImage').files[0];
+  const ngFile = document.getElementById('e_ngImage').files[0];
+  const complaintFile = document.getElementById('e_complaintImage').files[0];
   const data = {
     dateRaised: val('e_dateRaised'), raisedBy: val('e_raisedBy'),
-    supplierCode: val('e_supplierCode'), supplierName: val('e_supplierName'), supplierContact: val('e_supplierContact'),
+    supplierCode: val('e_supplierCode'), supplierName: val('e_supplierName'),
     contactPerson: val('e_contactPerson'), contactMobile: val('e_contactMobile'), contactEmail: val('e_contactEmail'),
     poNumber: val('e_poNumber'), partNumber: val('e_partNumber'), partDescription: val('e_partDescription'),
     productFamily: val('e_productFamily'), defectCategory: val('e_defectCategory'),
@@ -645,9 +661,21 @@ async function submitEdit(){
     stockStatus: val('e_stockStatus'), remarks: val('e_remarks'), traceability: val('e_traceability')
   };
   const msg = document.getElementById('editMsg');
-  msg.className = 'msg'; msg.textContent = 'Saving...';
+  msg.className = 'msg'; msg.textContent = (okFile || ngFile || complaintFile) ? 'Uploading photo(s) & saving...' : 'Saving...';
   btn.disabled = true;
   try {
+    if (okFile) {
+      const b64 = await fileToBase64(okFile);
+      data.okImageBase64 = b64; data.okImageMime = okFile.type; data.okImageName = okFile.name;
+    }
+    if (ngFile) {
+      const b64 = await fileToBase64(ngFile);
+      data.ngImageBase64 = b64; data.ngImageMime = ngFile.type; data.ngImageName = ngFile.name;
+    }
+    if (complaintFile) {
+      const b64 = await fileToBase64(complaintFile);
+      data.complaintImageBase64 = b64; data.complaintImageMime = complaintFile.type; data.complaintImageName = complaintFile.name;
+    }
     const res = await apiPost({ action: 'update', ncNumber: currentDetailNc, data });
     if (res.error) { msg.className = 'msg err'; msg.textContent = res.error; return; }
     msg.className = 'msg ok'; msg.textContent = 'Saved.';
