@@ -258,6 +258,47 @@
   </div>
 </div>
 
+<!-- Edit NC modal -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Edit NC Details</h3><button class="close" onclick="closeModal('editOverlay')">&times;</button></div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field"><label>Date Raised</label><input type="date" id="e_dateRaised"></div>
+        <div class="field"><label>Raised By</label><input id="e_raisedBy"></div>
+        <div class="field"><label>Supplier Code</label><input id="e_supplierCode"></div>
+        <div class="field"><label>Supplier Name</label><input id="e_supplierName"></div>
+        <div class="field"><label>Supplier Contact</label><input id="e_supplierContact"></div>
+        <div class="field"><label>PO Number</label><input id="e_poNumber"></div>
+        <div class="field"><label>Part Number</label><input id="e_partNumber"></div>
+        <div class="field"><label>Component / Part Description</label><input id="e_partDescription"></div>
+        <div class="field"><label>Product Family</label><input id="e_productFamily"></div>
+        <div class="field"><label>Defect Category</label>
+          <select id="e_defectCategory"><option>Visual</option><option>Dimension</option><option>Packaging</option><option>Material</option><option>Functional</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Criticality</label>
+          <select id="e_criticality"><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
+        </div>
+        <div class="field"><label>Stock Status</label>
+          <select id="e_stockStatus"><option>Quarantine</option><option>Sorting</option><option>Already Adapted</option><option>Scrapped</option><option>NA</option></select>
+        </div>
+        <div class="field"><label>Qty Inspected</label><input type="number" id="e_qtyInspected"></div>
+        <div class="field"><label>Defect Qty</label><input type="number" id="e_defectQty"></div>
+        <div class="field"><label>Total Stock Available</label><input type="number" id="e_totalStock"></div>
+        <div class="field span2"><label>Sub-Defect / Description</label><textarea id="e_subDefect"></textarea></div>
+        <div class="field span2"><label>Nature of Complaint</label><textarea id="e_nature"></textarea></div>
+        <div class="field span2"><label>Traceability</label><input id="e_traceability"></div>
+        <div class="field span2"><label>Remarks</label><textarea id="e_remarks"></textarea></div>
+      </div>
+      <div class="msg" id="editMsg"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('editOverlay')">Cancel</button>
+      <button class="btn primary" id="submitEditBtn" onclick="submitEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Detail / update modal -->
 <div class="overlay" id="detailOverlay">
   <div class="modal">
@@ -265,6 +306,7 @@
     <div class="modal-body" id="detailBody"></div>
     <div class="modal-foot">
       <button class="btn" style="border-color:var(--red);color:var(--red);" onclick="deleteCurrentNc()">🗑 Delete NC</button>
+      <button class="btn" onclick="openEditModal()">✏️ Edit Details</button>
       <span style="flex:1;"></span>
       <button class="btn primary" onclick="closeModal('detailOverlay')">Close</button>
     </div>
@@ -549,6 +591,57 @@ function exportCSV(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function openEditModal(){
+  const r = allRows.find(x => x.ncNumber === currentDetailNc);
+  if (!r) return;
+  document.getElementById('e_dateRaised').value = toIso(r.dateRaised);
+  document.getElementById('e_raisedBy').value = r.raisedBy || '';
+  document.getElementById('e_supplierCode').value = r.supplierCode || '';
+  document.getElementById('e_supplierName').value = r.supplierName || '';
+  document.getElementById('e_supplierContact').value = r.supplierContact || '';
+  document.getElementById('e_poNumber').value = r.poNumber || '';
+  document.getElementById('e_partNumber').value = r.partNumber || '';
+  document.getElementById('e_partDescription').value = r.partDescription || '';
+  document.getElementById('e_productFamily').value = r.productFamily || '';
+  document.getElementById('e_defectCategory').value = r.defectCategory || 'Visual';
+  document.getElementById('e_criticality').value = r.criticality || 'MEDIUM';
+  document.getElementById('e_stockStatus').value = r.stockStatus || 'NA';
+  document.getElementById('e_qtyInspected').value = r.qtyInspected || '';
+  document.getElementById('e_defectQty').value = r.defectQty || '';
+  document.getElementById('e_totalStock').value = r.totalStock || '';
+  document.getElementById('e_subDefect').value = r.subDefect || '';
+  document.getElementById('e_nature').value = r.nature || '';
+  document.getElementById('e_traceability').value = r.traceability || '';
+  document.getElementById('e_remarks').value = r.remarks || '';
+  document.getElementById('editMsg').textContent = '';
+  document.getElementById('editOverlay').classList.add('open');
+}
+
+async function submitEdit(){
+  const btn = document.getElementById('submitEditBtn');
+  const data = {
+    dateRaised: val('e_dateRaised'), raisedBy: val('e_raisedBy'),
+    supplierCode: val('e_supplierCode'), supplierName: val('e_supplierName'), supplierContact: val('e_supplierContact'),
+    poNumber: val('e_poNumber'), partNumber: val('e_partNumber'), partDescription: val('e_partDescription'),
+    productFamily: val('e_productFamily'), defectCategory: val('e_defectCategory'),
+    subDefect: val('e_subDefect'), nature: val('e_nature'), criticality: val('e_criticality'),
+    qtyInspected: numVal('e_qtyInspected'), defectQty: numVal('e_defectQty'), totalStock: numVal('e_totalStock'),
+    stockStatus: val('e_stockStatus'), remarks: val('e_remarks'), traceability: val('e_traceability')
+  };
+  const msg = document.getElementById('editMsg');
+  msg.className = 'msg'; msg.textContent = 'Saving...';
+  btn.disabled = true;
+  try {
+    const res = await apiPost({ action: 'update', ncNumber: currentDetailNc, data });
+    if (res.error) { msg.className = 'msg err'; msg.textContent = res.error; return; }
+    msg.className = 'msg ok'; msg.textContent = 'Saved.';
+    await loadAll();
+    setTimeout(() => closeModal('editOverlay'), 500);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function deleteCurrentNc(){
