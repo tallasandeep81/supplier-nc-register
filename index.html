@@ -53,6 +53,9 @@
   .dl-badge.ok{background:var(--green-bg);color:var(--green);}
   .dl-badge.closed{background:#eef0f3;color:var(--sub);}
   .due-mini{font-size:10px;color:var(--sub);margin-top:3px;white-space:nowrap;}
+  .due-mini.due-overdue{color:var(--red);font-weight:700;}
+  .due-mini.due-soon{color:var(--amber);font-weight:700;}
+  .due-mini.due-ok{color:var(--green);font-weight:600;}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px;}
   .stat .num{font-size:24px;font-weight:700;color:var(--navy);}
   .stat .lbl{font-size:11.5px;color:var(--sub);margin-top:2px;}
@@ -220,7 +223,6 @@
         <div class="field span2"><label>Traceability (Date Code / Batch / Docket No.)</label><input id="f_traceability" placeholder="e.g. Docket HYD93400793, D.C No. 104"></div>
         <div class="field"><label>OK / Reference Sample Photo</label><input type="file" accept="image/*" id="f_okImage"></div>
         <div class="field"><label>NOT OK / Defect Photo</label><input type="file" accept="image/*" id="f_ngImage"></div>
-        <div class="field span2"><label>Complaint / Supporting Photo (label, batch, packaging, etc.)</label><input type="file" accept="image/*" id="f_complaintImage"></div>
         <div class="field span2"><label>Remarks</label><textarea id="f_remarks"></textarea></div>
       </div>
       <div class="msg" id="newMsg"></div>
@@ -295,7 +297,6 @@
         <div class="field span2"><label>Traceability</label><input id="e_traceability"></div>
         <div class="field"><label>OK / Reference Photo (leave blank to keep existing)</label><input type="file" accept="image/*" id="e_okImage"></div>
         <div class="field"><label>NOT OK / Defect Photo (leave blank to keep existing)</label><input type="file" accept="image/*" id="e_ngImage"></div>
-        <div class="field span2"><label>Complaint / Supporting Photo (leave blank to keep existing)</label><input type="file" accept="image/*" id="e_complaintImage"></div>
         <div class="field span2"><label>Remarks</label><textarea id="e_remarks"></textarea></div>
       </div>
       <div class="msg" id="editMsg"></div>
@@ -363,9 +364,22 @@ function daysLeftFor(r){
   const today = new Date(); today.setHours(0,0,0,0);
   return Math.ceil((due - today) / 86400000);
 }
-function dueMini(dueStr){
+function dueMini(dueStr, status){
   if (!dueStr) return '';
-  return `<div class="due-mini">Due ${dueStr}</div>`;
+  let cls = '';
+  if (status === 'On Time') {
+    cls = 'due-ok';
+  } else if (status === 'Delayed') {
+    cls = 'due-overdue';
+  } else {
+    const due = new Date(toIso(dueStr));
+    if (!isNaN(due)) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const days = Math.ceil((due - today) / 86400000);
+      cls = days < 0 ? 'due-overdue' : (days <= 1 ? 'due-soon' : '');
+    }
+  }
+  return `<div class="due-mini ${cls}">Due ${dueStr}</div>`;
 }
 function deadlineBadge(r){
   if (r.overallStatus === 'Closed') return '<span class="dl-badge closed">Closed</span>';
@@ -417,16 +431,16 @@ function renderTable() {
   document.getElementById('emptyMsg').style.display = rows.length ? 'none' : 'block';
   body.innerHTML = rows.map(r => `
     <tr onclick='openDetail(${JSON.stringify(r.ncNumber)})'>
-      <td class="nc-num">${r.ncNumber} ${(r.okImage || r.ngImage || r.complaintImage) ? '<span title="Photos attached">📷</span>' : ''}</td>
+      <td class="nc-num">${r.ncNumber} ${(r.okImage || r.ngImage) ? '<span title="Photos attached">📷</span>' : ''}</td>
       <td>${r.dateRaised}</td>
       <td>${r.supplierName}</td>
       <td>${r.partNumber}</td>
       <td>${r.partDescription||''}</td>
       <td>${r.defectCategory}</td>
       <td><span class="badge ${statusClass(r.criticality)}">${r.criticality||''}</span></td>
-      <td><span class="badge ${statusClass(r.d3Status)}">${r.d3Status||'Pending'}</span>${dueMini(r.d3Due)}</td>
-      <td><span class="badge ${statusClass(r.d4Status)}">${r.d4Status||'Pending'}</span>${dueMini(r.d4Due)}</td>
-      <td><span class="badge ${statusClass(r.d5Status)}">${r.d5Status||'Pending'}</span>${dueMini(r.d5Due)}</td>
+      <td><span class="badge ${statusClass(r.d3Status)}">${r.d3Status||'Pending'}</span>${dueMini(r.d3Due, r.d3Status)}</td>
+      <td><span class="badge ${statusClass(r.d4Status)}">${r.d4Status||'Pending'}</span>${dueMini(r.d4Due, r.d4Status)}</td>
+      <td><span class="badge ${statusClass(r.d5Status)}">${r.d5Status||'Pending'}</span>${dueMini(r.d5Due, r.d5Status)}</td>
       <td><span class="badge ${statusClass(r.overallStatus)}">${r.overallStatus||''}</span></td>
       <td>${deadlineBadge(r)}</td>
     </tr>
@@ -455,7 +469,6 @@ async function submitNew(){
   const btn = document.getElementById('submitNewBtn');
   const okFile = document.getElementById('f_okImage').files[0];
   const ngFile = document.getElementById('f_ngImage').files[0];
-  const complaintFile = document.getElementById('f_complaintImage').files[0];
   const data = {
     dateRaised: val('f_dateRaised'), raisedBy: val('f_raisedBy'),
     supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'),
@@ -472,7 +485,7 @@ async function submitNew(){
     return;
   }
   document.getElementById('newMsg').className = 'msg';
-  document.getElementById('newMsg').textContent = (okFile || ngFile || complaintFile) ? 'Uploading photo(s) & saving...' : 'Saving...';
+  document.getElementById('newMsg').textContent = (okFile || ngFile) ? 'Uploading photo(s) & saving...' : 'Saving...';
   btn.disabled = true;
   try {
     if (okFile) {
@@ -482,10 +495,6 @@ async function submitNew(){
     if (ngFile) {
       const b64 = await fileToBase64(ngFile);
       data.ngImageBase64 = b64; data.ngImageMime = ngFile.type; data.ngImageName = ngFile.name;
-    }
-    if (complaintFile) {
-      const b64 = await fileToBase64(complaintFile);
-      data.complaintImageBase64 = b64; data.complaintImageMime = complaintFile.type; data.complaintImageName = complaintFile.name;
     }
     const res = await apiPost({ action: 'create', data });
     if (res.error) {
@@ -515,7 +524,7 @@ async function openDetail(ncNumber){
   const contactLine = contactBits.length
     ? `<div class="due" style="margin-bottom:12px;">📇 ${contactBits.join(' · ')}</div>`
     : (r.supplierContact ? `<div class="due" style="margin-bottom:12px;">📇 ${r.supplierContact}</div>` : '');
-  const photoRow = (r.okImage || r.ngImage || r.complaintImage || r.traceability) ? `
+  const photoRow = (r.okImage || r.ngImage || r.traceability) ? `
     <div class="stage-block">
       <h4>Reference</h4>
       <div class="grid2">
@@ -527,10 +536,6 @@ async function openDetail(ncNumber){
           <div class="field"><label>NOT OK / Defect</label></div>
           ${r.ngImage ? `<a href="${r.ngImage}" target="_blank"><img src="${r.ngImage}" style="width:100%;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;"></a>` : '<div class="msg" style="color:var(--sub);">No photo attached</div>'}
         </div>
-      </div>
-      <div style="margin-top:12px;">
-        <div class="field"><label>Complaint / Supporting Photo</label></div>
-        ${r.complaintImage ? `<a href="${r.complaintImage}" target="_blank"><img src="${r.complaintImage}" style="max-width:100%;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;"></a>` : '<div class="msg" style="color:var(--sub);">No photo attached</div>'}
       </div>
       ${r.traceability ? `<div class="due" style="margin-top:8px;"><strong>Traceability:</strong> ${r.traceability}</div>` : ''}
     </div>` : '';
@@ -589,8 +594,7 @@ const CSV_COLUMNS = [
   ['d5Capa', 'D5-D8 - CAPA'], ['d5Due', 'D5-D8 Due Date'], ['d5Actual', 'D5-D8 Actual Date'], ['d5Status', 'D5-D8 Status'],
   ['horizontalDeploy', 'Horizontal Deployment'], ['effectiveness', 'Effectiveness Monitoring'],
   ['overallStatus', 'Overall NC Status'], ['remarks', 'Remarks'],
-  ['traceability', 'Traceability'], ['okImage', 'OK Image URL'], ['ngImage', 'NG Image URL'],
-  ['complaintImage', 'Complaint Photo URL']
+  ['traceability', 'Traceability'], ['okImage', 'OK Image URL'], ['ngImage', 'NG Image URL']
 ];
 
 function csvEscape(val){
@@ -649,7 +653,6 @@ async function submitEdit(){
   const btn = document.getElementById('submitEditBtn');
   const okFile = document.getElementById('e_okImage').files[0];
   const ngFile = document.getElementById('e_ngImage').files[0];
-  const complaintFile = document.getElementById('e_complaintImage').files[0];
   const data = {
     dateRaised: val('e_dateRaised'), raisedBy: val('e_raisedBy'),
     supplierCode: val('e_supplierCode'), supplierName: val('e_supplierName'),
@@ -661,7 +664,7 @@ async function submitEdit(){
     stockStatus: val('e_stockStatus'), remarks: val('e_remarks'), traceability: val('e_traceability')
   };
   const msg = document.getElementById('editMsg');
-  msg.className = 'msg'; msg.textContent = (okFile || ngFile || complaintFile) ? 'Uploading photo(s) & saving...' : 'Saving...';
+  msg.className = 'msg'; msg.textContent = (okFile || ngFile) ? 'Uploading photo(s) & saving...' : 'Saving...';
   btn.disabled = true;
   try {
     if (okFile) {
@@ -671,10 +674,6 @@ async function submitEdit(){
     if (ngFile) {
       const b64 = await fileToBase64(ngFile);
       data.ngImageBase64 = b64; data.ngImageMime = ngFile.type; data.ngImageName = ngFile.name;
-    }
-    if (complaintFile) {
-      const b64 = await fileToBase64(complaintFile);
-      data.complaintImageBase64 = b64; data.complaintImageMime = complaintFile.type; data.complaintImageName = complaintFile.name;
     }
     const res = await apiPost({ action: 'update', ncNumber: currentDetailNc, data });
     if (res.error) { msg.className = 'msg err'; msg.textContent = res.error; return; }
