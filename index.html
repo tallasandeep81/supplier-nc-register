@@ -415,7 +415,10 @@ function populateSupplierList(){
 function autofillSupplier(prefix){
   const typed = document.getElementById(`${prefix}_supplierName`).value.trim().toLowerCase();
   if (!typed) return;
-  const match = [...allRows].reverse().find(r => (r.supplierName || '').trim().toLowerCase() === typed);
+  const excludeNc = prefix === 'e' ? currentDetailNc : null;
+  const match = [...allRows].reverse().find(r =>
+    (r.supplierName || '').trim().toLowerCase() === typed && r.ncNumber !== excludeNc
+  );
   if (!match) return;
   const setIfEmpty = (id, value) => {
     const el = document.getElementById(id);
@@ -687,6 +690,7 @@ function openEditModal(){
   document.getElementById('e_traceability').value = r.traceability || '';
   document.getElementById('e_remarks').value = r.remarks || '';
   document.getElementById('editMsg').textContent = '';
+  autofillSupplier('e');
   document.getElementById('editOverlay').classList.add('open');
 }
 
