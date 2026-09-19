@@ -197,6 +197,9 @@
         <div class="field"><label>Supplier Code</label><input id="f_supplierCode"></div>
         <div class="field"><label>Supplier Name</label><input id="f_supplierName"></div>
         <div class="field"><label>Supplier Contact</label><input id="f_supplierContact"></div>
+        <div class="field"><label>Contact Person Name</label><input id="f_contactPerson"></div>
+        <div class="field"><label>Mobile Number</label><input id="f_contactMobile"></div>
+        <div class="field"><label>Email ID</label><input type="email" id="f_contactEmail"></div>
         <div class="field"><label>PO Number</label><input id="f_poNumber"></div>
         <div class="field"><label>Part Number</label><input id="f_partNumber"></div>
         <div class="field"><label>Part Description</label><input id="f_partDescription"></div>
@@ -269,6 +272,9 @@
         <div class="field"><label>Supplier Code</label><input id="e_supplierCode"></div>
         <div class="field"><label>Supplier Name</label><input id="e_supplierName"></div>
         <div class="field"><label>Supplier Contact</label><input id="e_supplierContact"></div>
+        <div class="field"><label>Contact Person Name</label><input id="e_contactPerson"></div>
+        <div class="field"><label>Mobile Number</label><input id="e_contactMobile"></div>
+        <div class="field"><label>Email ID</label><input type="email" id="e_contactEmail"></div>
         <div class="field"><label>PO Number</label><input id="e_poNumber"></div>
         <div class="field"><label>Part Number</label><input id="e_partNumber"></div>
         <div class="field"><label>Component / Part Description</label><input id="e_partDescription"></div>
@@ -450,6 +456,7 @@ async function submitNew(){
   const data = {
     dateRaised: val('f_dateRaised'), raisedBy: val('f_raisedBy'),
     supplierCode: val('f_supplierCode'), supplierName: val('f_supplierName'), supplierContact: val('f_supplierContact'),
+    contactPerson: val('f_contactPerson'), contactMobile: val('f_contactMobile'), contactEmail: val('f_contactEmail'),
     poNumber: val('f_poNumber'), partNumber: val('f_partNumber'), partDescription: val('f_partDescription'),
     productFamily: val('f_productFamily'), defectCategory: val('f_defectCategory'),
     subDefect: val('f_subDefect'), nature: val('f_nature'), criticality: val('f_criticality'),
@@ -497,6 +504,8 @@ async function openDetail(ncNumber){
   if (!r) return;
   currentDetailNc = ncNumber;
   document.getElementById('detailTitle').textContent = `${r.ncNumber} — ${r.supplierName}`;
+  const contactBits = [r.contactPerson, r.contactMobile, r.contactEmail].filter(Boolean);
+  const contactLine = contactBits.length ? `<div class="due" style="margin-bottom:12px;">📇 ${contactBits.join(' · ')}</div>` : '';
   const photoRow = (r.okImage || r.ngImage || r.traceability) ? `
     <div class="stage-block">
       <h4>Reference</h4>
@@ -512,7 +521,7 @@ async function openDetail(ncNumber){
       </div>
       ${r.traceability ? `<div class="due" style="margin-top:8px;"><strong>Traceability:</strong> ${r.traceability}</div>` : ''}
     </div>` : '';
-  document.getElementById('detailBody').innerHTML = photoRow
+  document.getElementById('detailBody').innerHTML = contactLine + photoRow
     + stageForm('d3', 'D3 — Containment Action (due within 2 days)', r, 'd3Action', 'd3Due', 'd3Actual', 'd3Status', 'd3Doc')
     + stageForm('d4', 'D4 — Root Cause Analysis (due within 2 weeks)', r, 'd4Rca', 'd4Due', 'd4Actual', 'd4Status', 'd4Doc', !r.d3Actual)
     + stageForm('d5', 'D5–D8 — Corrective / Preventive Action (due within 2 months)', r, 'd5Capa', 'd5Due', 'd5Actual', 'd5Status', 'd5Doc', !r.d4Actual);
@@ -556,6 +565,7 @@ function toIso(dmy){
 const CSV_COLUMNS = [
   ['ncNumber', 'NC Number'], ['dateRaised', 'Date Raised'], ['raisedBy', 'Raised By'],
   ['supplierCode', 'Supplier Code'], ['supplierName', 'Supplier Name'], ['supplierContact', 'Supplier Contact'],
+  ['contactPerson', 'Contact Person'], ['contactMobile', 'Mobile Number'], ['contactEmail', 'Email ID'],
   ['poNumber', 'PO Number'], ['partNumber', 'Part Number'], ['partDescription', 'Part Description'],
   ['productFamily', 'Product Family'], ['defectCategory', 'Defect Category'], ['subDefect', 'Sub-Defect'],
   ['nature', 'Nature of Complaint'], ['criticality', 'Criticality'],
@@ -601,6 +611,9 @@ function openEditModal(){
   document.getElementById('e_supplierCode').value = r.supplierCode || '';
   document.getElementById('e_supplierName').value = r.supplierName || '';
   document.getElementById('e_supplierContact').value = r.supplierContact || '';
+  document.getElementById('e_contactPerson').value = r.contactPerson || '';
+  document.getElementById('e_contactMobile').value = r.contactMobile || '';
+  document.getElementById('e_contactEmail').value = r.contactEmail || '';
   document.getElementById('e_poNumber').value = r.poNumber || '';
   document.getElementById('e_partNumber').value = r.partNumber || '';
   document.getElementById('e_partDescription').value = r.partDescription || '';
@@ -624,6 +637,7 @@ async function submitEdit(){
   const data = {
     dateRaised: val('e_dateRaised'), raisedBy: val('e_raisedBy'),
     supplierCode: val('e_supplierCode'), supplierName: val('e_supplierName'), supplierContact: val('e_supplierContact'),
+    contactPerson: val('e_contactPerson'), contactMobile: val('e_contactMobile'), contactEmail: val('e_contactEmail'),
     poNumber: val('e_poNumber'), partNumber: val('e_partNumber'), partDescription: val('e_partDescription'),
     productFamily: val('e_productFamily'), defectCategory: val('e_defectCategory'),
     subDefect: val('e_subDefect'), nature: val('e_nature'), criticality: val('e_criticality'),
