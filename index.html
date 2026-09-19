@@ -428,25 +428,26 @@ function populateSupplierList(){
   document.getElementById('supplierNames').innerHTML = names.map(n => `<option value="${n.replace(/"/g,'&quot;')}">`).join('');
 }
 
-/** Fills contact fields from the most recent existing NC for this supplier — only into fields that are still empty. */
+/** Fills contact fields from past NCs for this supplier — scans all matches (most recent first) and uses the first non-empty value found per field. Only fills fields that are still empty. */
 function autofillSupplier(prefix){
   const typed = document.getElementById(`${prefix}_supplierName`).value.trim().toLowerCase();
   if (!typed) return;
   const excludeNc = prefix === 'e' ? currentDetailNc : null;
-  const match = [...allRows].reverse().find(r =>
+  const candidates = [...allRows].reverse().filter(r =>
     (r.supplierName || '').trim().toLowerCase() === typed && r.ncNumber !== excludeNc
   );
-  if (!match) return;
+  if (!candidates.length) return;
+  const pick = (field) => { const hit = candidates.find(c => c[field]); return hit ? hit[field] : ''; };
   const setIfEmpty = (id, value) => {
     const el = document.getElementById(id);
     if (el && !el.value && value) el.value = value;
   };
-  setIfEmpty(`${prefix}_supplierCode`, match.supplierCode);
-  setIfEmpty(`${prefix}_contactPerson`, match.contactPerson);
-  setIfEmpty(`${prefix}_contactMobile`, match.contactMobile);
-  setIfEmpty(`${prefix}_contactEmail`, match.contactEmail);
-  setIfEmpty(`${prefix}_contactPerson2`, match.contactPerson2);
-  setIfEmpty(`${prefix}_contactMobile2`, match.contactMobile2);
+  setIfEmpty(`${prefix}_supplierCode`, pick('supplierCode'));
+  setIfEmpty(`${prefix}_contactPerson`, pick('contactPerson'));
+  setIfEmpty(`${prefix}_contactMobile`, pick('contactMobile'));
+  setIfEmpty(`${prefix}_contactEmail`, pick('contactEmail'));
+  setIfEmpty(`${prefix}_contactPerson2`, pick('contactPerson2'));
+  setIfEmpty(`${prefix}_contactMobile2`, pick('contactMobile2'));
 }
 
 function renderStats(s) {
