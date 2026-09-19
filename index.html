@@ -189,6 +189,8 @@
   </div>
 </main>
 
+<datalist id="supplierNames"></datalist>
+
 <!-- New complaint modal -->
 <div class="overlay" id="newOverlay">
   <div class="modal">
@@ -198,7 +200,7 @@
         <div class="field"><label>Date Raised</label><input type="date" id="f_dateRaised"></div>
         <div class="field"><label>Raised By</label><input id="f_raisedBy" placeholder="Your name"></div>
         <div class="field"><label>Supplier Code</label><input id="f_supplierCode"></div>
-        <div class="field"><label>Supplier Name</label><input id="f_supplierName"></div>
+        <div class="field"><label>Supplier Name</label><input id="f_supplierName" list="supplierNames" oninput="autofillSupplier('f')"></div>
         <div class="field"><label>Contact Person Name</label><input id="f_contactPerson"></div>
         <div class="field"><label>Mobile Number</label><input id="f_contactMobile"></div>
         <div class="field"><label>Email ID</label><input type="email" id="f_contactEmail"></div>
@@ -274,7 +276,7 @@
         <div class="field"><label>Date Raised</label><input type="date" id="e_dateRaised"></div>
         <div class="field"><label>Raised By</label><input id="e_raisedBy"></div>
         <div class="field"><label>Supplier Code</label><input id="e_supplierCode"></div>
-        <div class="field"><label>Supplier Name</label><input id="e_supplierName"></div>
+        <div class="field"><label>Supplier Name</label><input id="e_supplierName" list="supplierNames" oninput="autofillSupplier('e')"></div>
         <div class="field"><label>Contact Person Name</label><input id="e_contactPerson"></div>
         <div class="field"><label>Mobile Number</label><input id="e_contactMobile"></div>
         <div class="field"><label>Email ID</label><input type="email" id="e_contactEmail"></div>
@@ -401,6 +403,30 @@ async function loadAll() {
   const dueSoon = allRows.filter(r => r.overallStatus !== 'Closed' && daysLeftFor(r) !== null && daysLeftFor(r) <= 1).length;
   renderStats({ ...stats, dueSoon });
   renderTable();
+  populateSupplierList();
+}
+
+function populateSupplierList(){
+  const names = [...new Set(allRows.map(r => r.supplierName).filter(Boolean))].sort();
+  document.getElementById('supplierNames').innerHTML = names.map(n => `<option value="${n.replace(/"/g,'&quot;')}">`).join('');
+}
+
+/** Fills contact fields from the most recent existing NC for this supplier — only into fields that are still empty. */
+function autofillSupplier(prefix){
+  const typed = document.getElementById(`${prefix}_supplierName`).value.trim().toLowerCase();
+  if (!typed) return;
+  const match = [...allRows].reverse().find(r => (r.supplierName || '').trim().toLowerCase() === typed);
+  if (!match) return;
+  const setIfEmpty = (id, value) => {
+    const el = document.getElementById(id);
+    if (el && !el.value && value) el.value = value;
+  };
+  setIfEmpty(`${prefix}_supplierCode`, match.supplierCode);
+  setIfEmpty(`${prefix}_contactPerson`, match.contactPerson);
+  setIfEmpty(`${prefix}_contactMobile`, match.contactMobile);
+  setIfEmpty(`${prefix}_contactEmail`, match.contactEmail);
+  setIfEmpty(`${prefix}_contactPerson2`, match.contactPerson2);
+  setIfEmpty(`${prefix}_contactMobile2`, match.contactMobile2);
 }
 
 function renderStats(s) {
