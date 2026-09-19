@@ -118,6 +118,7 @@
 
   #configBar{background:var(--amber-bg);border-bottom:1px solid #e6d18a;padding:8px 24px;font-size:12px;color:#6b5410;display:none;}
   #configBar.show{display:block;}
+  #loadErrorBar{background:var(--red-bg);border-bottom:1px solid #e3a8a3;padding:8px 24px;font-size:12px;color:var(--red);display:none;align-items:center;}
 </style>
 </head>
 <body>
@@ -125,6 +126,7 @@
 <div id="configBar">
   Set your Apps Script Web App URL in <code>API_URL</code> at the bottom of this file before use.
 </div>
+<div id="loadErrorBar"></div>
 
 <header>
   <div class="brand">
@@ -398,12 +400,27 @@ function deadlineBadge(r){
 }
 
 async function loadAll() {
-  const [rows, stats] = await Promise.all([apiGet('list'), apiGet('dashboard')]);
-  allRows = Array.isArray(rows) ? rows : [];
-  const dueSoon = allRows.filter(r => r.overallStatus !== 'Closed' && daysLeftFor(r) !== null && daysLeftFor(r) <= 1).length;
-  renderStats({ ...stats, dueSoon });
-  renderTable();
-  populateSupplierList();
+  try {
+    const res = await apiGet('all');
+    if (res.error) throw new Error(res.error);
+    allRows = Array.isArray(res.rows) ? res.rows : [];
+    const stats = res.stats || {};
+    const dueSoon = allRows.filter(r => r.overallStatus !== 'Closed' && daysLeftFor(r) !== null && daysLeftFor(r) <= 1).length;
+    renderStats({ ...stats, dueSoon });
+    renderTable();
+    populateSupplierList();
+    document.getElementById('loadErrorBar').style.display = 'none';
+  } catch (err) {
+    const bar = document.getElementById('loadErrorBar');
+    bar.textContent = `Couldn't load the register: ${err.message}. `;
+    const retry = document.createElement('button');
+    retry.textContent = 'Retry';
+    retry.className = 'btn';
+    retry.style.marginLeft = '8px';
+    retry.onclick = loadAll;
+    bar.appendChild(retry);
+    bar.style.display = 'block';
+  }
 }
 
 function populateSupplierList(){
