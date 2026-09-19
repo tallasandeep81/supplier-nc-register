@@ -52,6 +52,7 @@
   .dl-badge.soon{background:var(--amber-bg);color:var(--amber);}
   .dl-badge.ok{background:var(--green-bg);color:var(--green);}
   .dl-badge.closed{background:#eef0f3;color:var(--sub);}
+  .due-mini{font-size:10px;color:var(--sub);margin-top:3px;white-space:nowrap;}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px;}
   .stat .num{font-size:24px;font-weight:700;color:var(--navy);}
   .stat .lbl{font-size:11.5px;color:var(--sub);margin-top:2px;}
@@ -262,6 +263,11 @@
   <div class="modal">
     <div class="modal-head"><h3 id="detailTitle">NC Detail</h3><button class="close" onclick="closeModal('detailOverlay')">&times;</button></div>
     <div class="modal-body" id="detailBody"></div>
+    <div class="modal-foot">
+      <button class="btn" style="border-color:var(--red);color:var(--red);" onclick="deleteCurrentNc()">🗑 Delete NC</button>
+      <span style="flex:1;"></span>
+      <button class="btn primary" onclick="closeModal('detailOverlay')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -306,6 +312,10 @@ function daysLeftFor(r){
   if (isNaN(due)) return null;
   const today = new Date(); today.setHours(0,0,0,0);
   return Math.ceil((due - today) / 86400000);
+}
+function dueMini(dueStr){
+  if (!dueStr) return '';
+  return `<div class="due-mini">Due ${dueStr}</div>`;
 }
 function deadlineBadge(r){
   if (r.overallStatus === 'Closed') return '<span class="dl-badge closed">Closed</span>';
@@ -363,9 +373,9 @@ function renderTable() {
       <td>${r.partNumber}</td>
       <td>${r.defectCategory}</td>
       <td><span class="badge ${statusClass(r.criticality)}">${r.criticality||''}</span></td>
-      <td><span class="badge ${statusClass(r.d3Status)}">${r.d3Status||'Pending'}</span></td>
-      <td><span class="badge ${statusClass(r.d4Status)}">${r.d4Status||'Pending'}</span></td>
-      <td><span class="badge ${statusClass(r.d5Status)}">${r.d5Status||'Pending'}</span></td>
+      <td><span class="badge ${statusClass(r.d3Status)}">${r.d3Status||'Pending'}</span>${dueMini(r.d3Due)}</td>
+      <td><span class="badge ${statusClass(r.d4Status)}">${r.d4Status||'Pending'}</span>${dueMini(r.d4Due)}</td>
+      <td><span class="badge ${statusClass(r.d5Status)}">${r.d5Status||'Pending'}</span>${dueMini(r.d5Due)}</td>
       <td><span class="badge ${statusClass(r.overallStatus)}">${r.overallStatus||''}</span></td>
       <td>${deadlineBadge(r)}</td>
     </tr>
@@ -437,9 +447,12 @@ async function submitNew(){
 function val(id){ return document.getElementById(id).value; }
 function numVal(id){ const v = document.getElementById(id).value; return v === '' ? '' : Number(v); }
 
+let currentDetailNc = null;
+
 async function openDetail(ncNumber){
   const r = allRows.find(x => x.ncNumber === ncNumber);
   if (!r) return;
+  currentDetailNc = ncNumber;
   document.getElementById('detailTitle').textContent = `${r.ncNumber} — ${r.supplierName}`;
   const photoRow = (r.okImage || r.ngImage || r.traceability) ? `
     <div class="stage-block">
@@ -532,8 +545,17 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
-async function saveStage(stage, ncNumber){
-  const actionText = document.getElementById(`${stage}_action`).value;
+async function deleteCurrentNc(){
+  if (!currentDetailNc) return;
+  const ok = confirm(`Permanently delete ${currentDetailNc}? This cannot be undone.`);
+  if (!ok) return;
+  const res = await apiPost({ action: 'delete', ncNumber: currentDetailNc });
+  if (res.error) { alert(res.error); return; }
+  closeModal('detailOverlay');
+  await loadAll();
+}
+
+async function saveStage(stage, ncNumber){  const actionText = document.getElementById(`${stage}_action`).value;
   const actualDate = document.getElementById(`${stage}_date`).value;
   const msg = document.getElementById(`${stage}_msg`);
   msg.className = 'msg'; msg.textContent = 'Saving...';
