@@ -918,7 +918,7 @@ function openReport(ncNumber){
     r.qtyInspected || r.defectQty ? `Sample Inspected: ${r.qtyInspected || '-'} Nos. | Defective Found: ${r.defectQty || '-'} Nos.` : '',
     r.traceability ? `Traceability / Docket No.: ${r.traceability}` : '', '',
     'Kindly investigate the root cause and take immediate corrective action. Please ensure 100% inspection before dispatch. Kindly share the RCA report along with corrective and preventive actions (CAPA) at the earliest.', '',
-    'Please note: you are required to strictly adhere to TVL\'s 2-2-2 escalation timeline - Containment Action (D3) within 2 Days, Root Cause Analysis (D4) within 2 Weeks, and Corrective & Preventive Action (D5-D8) within 2 Months from the date this NC is raised. Non-submission within this timeline will be treated as non-compliance and may result in a supplier rating downgrade, escalation to management, and/or rejection of the concerned lot/PO.', '',
+    'Please note: TVL\'s 2-2-2 timeline is our own internal supplier-quality standard (applied on top of the standard 8D framework, not a clause of 8D itself), and you are required to strictly adhere to it - Containment Action (D3) within 2 Days, Root Cause Analysis (D4) within 2 Weeks, and Corrective & Preventive Action (D5-D8) within 2 Months from the date this NC is raised. Non-submission within this timeline will be treated as non-compliance and may result in a supplier rating downgrade, escalation to management, and/or rejection of the concerned lot/PO.', '',
     '(Please attach the PDF report - use the "Print / Save as PDF" button on the report page, save it, then attach it here before sending.)', '',
     'Thanks & Regards,', `${r.raisedBy || 'Sandeep Talla'}, Assistant Manager Quality`, 'Trans Valves (India) Pvt. Ltd.', '+91 9640898255 | sandeep@transvalves.com'
   ].join('\n');
@@ -1015,18 +1015,19 @@ function openReport(ncNumber){
     ${galleryCell(ngUrls, 'NOT OK / DEFECT', '#b3261e')}
   </div>
 
-  <div class="sectionhead">8D / 2-2-2 RULE — D3 (2 Days) · D4 (2 Weeks) · D5–D8 (2 Months) FROM DATE RAISED</div>
+  <div class="sectionhead">8D FRAMEWORK — TVL'S 2-2-2 TIMELINE STANDARD — D3 (2 Days) · D4 (2 Weeks) · D5–D8 (2 Months) FROM DATE RAISED</div>
   <table class="grid" style="margin-top:0;">
     ${stageRow2('D3 — Containment', r.d3Due, r.d3Actual, r.d3Status, r.d3Action)}
     ${stageRow2('D4 — Root Cause', r.d4Due, r.d4Actual, r.d4Status, r.d4Rca)}
     ${stageRow2('D5–D8 — CAPA', r.d5Due, r.d5Actual, r.d5Status, r.d5Capa)}
   </table>
   <div class="compliance-note">
-    The supplier is required to strictly adhere to TVL's 2-2-2 escalation timeline above: submit the Containment
-    Action (D3) within <strong>2 Days</strong>, the Root Cause Analysis (D4) within <strong>2 Weeks</strong>, and the
-    Corrective &amp; Preventive Action (D5–D8) within <strong>2 Months</strong> from the date this NC is raised.
-    Non-submission within the stipulated timeline will be treated as non-compliance and may result in a supplier
-    rating downgrade, escalation to management, and/or rejection of the concerned lot / PO.
+    <strong>Note:</strong> The 2-2-2 timeline above is TVL's own internal supplier-quality standard, applied on top of
+    the standard 8D framework (D1–D8) — it is not a clause of the 8D methodology itself. The supplier is required to
+    strictly adhere to it: submit the Containment Action (D3) within <strong>2 Days</strong>, the Root Cause Analysis
+    (D4) within <strong>2 Weeks</strong>, and the Corrective &amp; Preventive Action (D5–D8) within <strong>2 Months</strong>
+    from the date this NC is raised. Non-submission within the stipulated timeline will be treated as non-compliance
+    and may result in a supplier rating downgrade, escalation to management, and/or rejection of the concerned lot / PO.
   </div>
 
   ${r.remarks ? `<div class="sectionhead">REMARKS / OTHER INFORMATION</div><div class="noteblock">${esc(r.remarks)}</div>` : ''}
