@@ -917,6 +917,7 @@ function openReport(ncNumber){
     r.qtyInspected || r.defectQty ? `Sample Inspected: ${r.qtyInspected || '-'} Nos. | Defective Found: ${r.defectQty || '-'} Nos.` : '',
     r.traceability ? `Traceability / Docket No.: ${r.traceability}` : '', '',
     'Kindly investigate the root cause and take immediate corrective action. Please ensure 100% inspection before dispatch. Kindly share the RCA report along with corrective and preventive actions (CAPA) at the earliest.', '',
+    'Please note: you are required to strictly adhere to TVL\'s 2-2-2 escalation timeline - Containment Action (D3) within 2 Days, Root Cause Analysis (D4) within 2 Weeks, and Corrective & Preventive Action (D5-D8) within 2 Months from the date this NC is raised. Non-submission within this timeline will be treated as non-compliance and may result in a supplier rating downgrade, escalation to management, and/or rejection of the concerned lot/PO.', '',
     '(Please attach the PDF report - use the "Print / Save as PDF" button on the report page, save it, then attach it here before sending.)', '',
     'Thanks & Regards,', `${r.raisedBy || 'Sandeep Talla'}, Assistant Manager Quality`, 'Trans Valves (India) Pvt. Ltd.', '+91 9640898255 | sandeep@transvalves.com'
   ].join('\n');
@@ -945,7 +946,7 @@ function openReport(ncNumber){
     </div>` : `<div style="flex:1;"><div style="font-size:9.5px;font-weight:700;color:${color};margin-bottom:3px;">${label}</div><div style="font-size:10px;color:#999;">No photo attached</div></div>`;
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>${esc(r.ncNumber)} — Non Conformity Report</title>
+<html><head><meta charset="UTF-8"><title>${esc(r.ncNumber)}</title>
 <style>
   @page { size: A4; margin: 10mm 12mm; }
   @media print { .no-print { display:none !important; } body { margin:0; } }
@@ -957,8 +958,7 @@ function openReport(ncNumber){
   .letterhead h1{font-size:14px;margin:0;color:#1f3864;}
   .letterhead .sub{font-size:9px;color:#6b7280;margin-top:1px;}
   .doctitle{text-align:right;}
-  .doctitle h2{font-size:13px;margin:0;color:#1f3864;letter-spacing:.5px;}
-  .doctitle .cat{display:inline-block;background:#1f3864;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;margin-top:3px;}
+  .doctitle h2{font-size:16px;margin:0;color:#1f3864;font-weight:800;letter-spacing:.5px;}
   table.grid{width:100%;border-collapse:collapse;margin-bottom:6px;table-layout:fixed;}
   table.grid td{border:1px solid #c9ccd4;padding:3.5px 6px;vertical-align:top;font-size:10px;}
   table.grid td.lbl{background:#eef1f7;font-weight:700;color:#1f3864;width:15%;font-size:9px;}
@@ -973,6 +973,7 @@ function openReport(ncNumber){
   .sign{margin-top:10px;font-size:10px;display:flex;justify-content:space-between;}
   .sign strong{color:#1f3864;}
   .foot-note{margin-top:6px;font-size:8.5px;color:#8a8f9c;border-top:1px solid #ddd;padding-top:5px;}
+  .compliance-note{background:#fdf3d9;border:1px solid #e6d18a;border-radius:3px;padding:6px 9px;font-size:9px;color:#5c4a10;margin-bottom:6px;line-height:1.4;}
 </style></head>
 <body>
   <div class="printbar no-print">
@@ -991,7 +992,6 @@ function openReport(ncNumber){
     </div>
     <div class="doctitle">
       <h2>NON CONFORMITY REPORT</h2>
-      <span class="cat">NC</span>
     </div>
   </div>
 
@@ -1022,6 +1022,13 @@ function openReport(ncNumber){
     ${stageRow2('D4 — Root Cause', r.d4Due, r.d4Actual, r.d4Status, r.d4Rca)}
     ${stageRow2('D5–D8 — CAPA', r.d5Due, r.d5Actual, r.d5Status, r.d5Capa)}
   </table>
+  <div class="compliance-note">
+    The supplier is required to strictly adhere to TVL's 2-2-2 escalation timeline above: submit the Containment
+    Action (D3) within <strong>2 Days</strong>, the Root Cause Analysis (D4) within <strong>2 Weeks</strong>, and the
+    Corrective &amp; Preventive Action (D5–D8) within <strong>2 Months</strong> from the date this NC is raised.
+    Non-submission within the stipulated timeline will be treated as non-compliance and may result in a supplier
+    rating downgrade, escalation to management, and/or rejection of the concerned lot / PO.
+  </div>
 
   ${r.remarks ? `<div class="sectionhead">REMARKS / OTHER INFORMATION</div><div class="noteblock">${esc(r.remarks)}</div>` : ''}
 
