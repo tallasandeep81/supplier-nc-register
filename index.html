@@ -925,6 +925,10 @@ function openReport(ncNumber){
 
   // Two label:value cells per row, four <td> wide, matching the reference NC-form layout.
   const infoRow = (l1, v1, l2, v2) => `<tr><td class="lbl">${l1}</td><td class="val">${v1 || '—'}</td><td class="lbl">${l2}</td><td class="val">${v2 || '—'}</td></tr>`;
+  const critHtml = (c) => {
+    const colors = { HIGH: '#b3261e', MEDIUM: '#b8860b', LOW: '#1e6b3f' };
+    return c ? `<span style="color:${colors[c] || '#1f3864'};font-weight:700;">${esc(c)}</span>` : '';
+  };
 
   const stageRow2 = (stage, due, actual, status, details) => `
     <tr>
@@ -952,17 +956,15 @@ function openReport(ncNumber){
   @media print { .no-print { display:none !important; } body { margin:0; } }
   *{box-sizing:border-box;}
   body{font-family:Arial,Helvetica,sans-serif;color:#1c2230;max-width:800px;margin:0 auto;padding:14px 18px;line-height:1.35;font-size:10.5px;}
-  .letterhead{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2.5px solid #1f3864;padding-bottom:8px;margin-bottom:8px;}
-  .letterhead-left{display:flex;align-items:center;gap:10px;}
+  .doctitle-top{text-align:center;font-size:18px;margin:0 0 8px;color:#1f3864;font-weight:800;letter-spacing:.6px;}
+  .letterhead{display:flex;align-items:center;gap:10px;border-bottom:2.5px solid #1f3864;padding-bottom:8px;margin-bottom:8px;}
   .letterhead img{width:40px;height:40px;object-fit:contain;}
   .letterhead h1{font-size:14px;margin:0;color:#1f3864;}
   .letterhead .sub{font-size:9px;color:#6b7280;margin-top:1px;}
-  .doctitle{text-align:right;}
-  .doctitle h2{font-size:16px;margin:0;color:#1f3864;font-weight:800;letter-spacing:.5px;}
   table.grid{width:100%;border-collapse:collapse;margin-bottom:6px;table-layout:fixed;}
   table.grid td{border:1px solid #c9ccd4;padding:3.5px 6px;vertical-align:top;font-size:10px;}
-  table.grid td.lbl{background:#eef1f7;font-weight:700;color:#1f3864;width:15%;font-size:9px;}
-  table.grid td.val{width:35%;}
+  table.grid td.lbl{background:#eef1f7;font-weight:700;color:#1c2230;width:15%;font-size:9px;}
+  table.grid td.val{width:35%;color:#1f3864;font-weight:600;}
   .sectionhead{background:#1f3864;color:#fff;font-weight:700;font-size:9.5px;padding:3px 7px;margin:8px 0 0;}
   .noteblock{border:1px solid #c9ccd4;border-top:none;padding:6px 8px;font-size:10px;min-height:16px;}
   .photorow{display:flex;gap:12px;border:1px solid #c9ccd4;border-top:none;padding:6px 8px;}
@@ -982,22 +984,18 @@ function openReport(ncNumber){
     ${!supplierEmail ? '<span class="mailnote">No supplier email on file - fill in the To: field manually.</span>' : '<span class="mailnote">Save as PDF first, then attach it in the mail that opens.</span>'}
   </div>
 
+  <h2 class="doctitle-top">NON CONFORMITY REPORT</h2>
   <div class="letterhead">
-    <div class="letterhead-left">
-      <img src="${document.querySelector('.brand .mark').src}">
-      <div>
-        <h1>Trans Valves (India) Pvt. Ltd.</h1>
-        <div class="sub">15-B, S.V.C, Industrial Estate, IDA Jeedimetla, Hyderabad, Telangana - 500 055, INDIA</div>
-      </div>
-    </div>
-    <div class="doctitle">
-      <h2>NON CONFORMITY REPORT</h2>
+    <img src="${document.querySelector('.brand .mark').src}">
+    <div>
+      <h1>Trans Valves (India) Pvt. Ltd.</h1>
+      <div class="sub">15-B, S.V.C, Industrial Estate, IDA Jeedimetla, Hyderabad, Telangana - 500 055, INDIA</div>
     </div>
   </div>
 
   <table class="grid">
     ${infoRow('NC Number', esc(r.ncNumber), 'Date Raised', esc(r.dateRaised))}
-    ${infoRow('Criticality', esc(r.criticality), 'Defect Category', esc(r.defectCategory))}
+    ${infoRow('Criticality', critHtml(r.criticality), 'Defect Category', esc(r.defectCategory))}
     ${infoRow('Product Family', esc(r.productFamily), 'Sub-Defect', esc(r.subDefect))}
     ${infoRow('Part Number', esc(r.partNumber), 'Part Description', esc(r.partDescription))}
     ${infoRow('Supplier Name', esc(r.supplierName), 'Supplier Code', esc(r.supplierCode))}
