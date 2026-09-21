@@ -180,7 +180,7 @@
       <table id="regTable">
         <thead>
           <tr>
-            <th>NC Number</th><th>Date Raised</th><th>Supplier</th><th>Report</th><th>Component</th>
+            <th>S.No</th><th>NC Number</th><th>Date Raised</th><th>Supplier</th><th>Report</th><th>Component</th>
             <th>Defect</th><th>Criticality</th><th>D3</th><th>D4</th><th>D5-D8</th><th>Status</th><th>Next Deadline</th>
           </tr>
         </thead>
@@ -209,7 +209,7 @@
         <div class="field"><label>Contact Person 2 (optional)</label><input id="f_contactPerson2"></div>
         <div class="field"><label>Mobile Number 2 (optional)</label><input id="f_contactMobile2" placeholder="+91 XXXXX XXXXX" onblur="formatMobileField(this)"></div>
         <div class="field"><label>PO Number</label><input id="f_poNumber"></div>
-        <div class="field"><label>Part Number</label><input id="f_partNumber"></div>
+        <div class="field"><label>Part Number / Drawing No.</label><input id="f_partNumber"></div>
         <div class="field"><label>Part Description</label><input id="f_partDescription"></div>
         <div class="field"><label>Product Family</label>
           <select id="f_productFamily" onchange="toggleOtherFamily('f')">
@@ -295,7 +295,7 @@
         <div class="field"><label>Contact Person 2 (optional)</label><input id="e_contactPerson2"></div>
         <div class="field"><label>Mobile Number 2 (optional)</label><input id="e_contactMobile2" placeholder="+91 XXXXX XXXXX" onblur="formatMobileField(this)"></div>
         <div class="field"><label>PO Number</label><input id="e_poNumber"></div>
-        <div class="field"><label>Part Number</label><input id="e_partNumber"></div>
+        <div class="field"><label>Part Number / Drawing No.</label><input id="e_partNumber"></div>
         <div class="field"><label>Component / Part Description</label><input id="e_partDescription"></div>
         <div class="field"><label>Product Family</label>
           <select id="e_productFamily" onchange="toggleOtherFamily('e')">
@@ -503,6 +503,7 @@ function renderTable() {
   document.getElementById('emptyMsg').style.display = rows.length ? 'none' : 'block';
   body.innerHTML = rows.map(r => `
     <tr onclick='openDetail(${JSON.stringify(r.ncNumber)})'>
+      <td>${r.sno || ''}</td>
       <td class="nc-num">${r.ncNumber} ${(r.okImage || r.ngImage) ? '<span title="Photos attached">📷</span>' : ''}</td>
       <td>${r.dateRaised}</td>
       <td>${r.supplierName}</td>
@@ -721,7 +722,7 @@ const CSV_COLUMNS = [
   ['supplierCode', 'Supplier Code'], ['supplierName', 'Supplier Name'], ['supplierContact', 'Supplier Contact'],
   ['contactPerson', 'Contact Person'], ['contactMobile', 'Mobile Number'], ['contactEmail', 'Email ID'],
   ['contactPerson2', 'Contact Person 2'], ['contactMobile2', 'Mobile Number 2'],
-  ['poNumber', 'PO Number'], ['partNumber', 'Part Number'], ['partDescription', 'Part Description'],
+  ['poNumber', 'PO Number'], ['partNumber', 'Part Number / Drawing No.'], ['partDescription', 'Part Description'],
   ['productFamily', 'Product Family'], ['defectCategory', 'Defect Category'], ['subDefect', 'Sub-Defect'],
   ['nature', 'Nature of Complaint'], ['criticality', 'Criticality'],
   ['qtyInspected', 'Qty Inspected'], ['defectQty', 'Defect Qty'], ['ppm', 'PPM'],
@@ -997,7 +998,7 @@ function openReport(ncNumber){
     ${infoRow('NC Number', esc(r.ncNumber), 'Date Raised', esc(r.dateRaised))}
     ${infoRow('Criticality', critHtml(r.criticality), 'Defect Category', esc(r.defectCategory))}
     ${infoRow('Product Family', esc(r.productFamily), 'Sub-Defect', esc(r.subDefect))}
-    ${infoRow('Part Number', esc(r.partNumber), 'Part Description', esc(r.partDescription))}
+    ${infoRow('Part Number / Drawing No.', esc(r.partNumber), 'Part Description', esc(r.partDescription))}
     ${infoRow('Supplier Name', esc(r.supplierName), 'Supplier Code', esc(r.supplierCode))}
     ${infoRow('PO Number', esc(r.poNumber), 'Traceability / Docket No.', esc(r.traceability))}
     ${infoRow('No. of Parts Inspected', esc(r.qtyInspected), 'No. of Defects Found', esc(r.defectQty))}
