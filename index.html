@@ -204,10 +204,10 @@
         <div class="field"><label>Supplier Code</label><input id="f_supplierCode"></div>
         <div class="field"><label>Supplier Name</label><input id="f_supplierName" list="supplierNames" oninput="autofillSupplier('f')"></div>
         <div class="field"><label>Contact Person Name</label><input id="f_contactPerson"></div>
-        <div class="field"><label>Mobile Number</label><input id="f_contactMobile"></div>
+        <div class="field"><label>Mobile Number</label><input id="f_contactMobile" placeholder="+91 XXXXX XXXXX" onblur="formatMobileField(this)"></div>
         <div class="field"><label>Email ID</label><input type="email" id="f_contactEmail"></div>
         <div class="field"><label>Contact Person 2 (optional)</label><input id="f_contactPerson2"></div>
-        <div class="field"><label>Mobile Number 2 (optional)</label><input id="f_contactMobile2"></div>
+        <div class="field"><label>Mobile Number 2 (optional)</label><input id="f_contactMobile2" placeholder="+91 XXXXX XXXXX" onblur="formatMobileField(this)"></div>
         <div class="field"><label>PO Number</label><input id="f_poNumber"></div>
         <div class="field"><label>Part Number</label><input id="f_partNumber"></div>
         <div class="field"><label>Part Description</label><input id="f_partDescription"></div>
@@ -290,10 +290,10 @@
         <div class="field"><label>Supplier Code</label><input id="e_supplierCode"></div>
         <div class="field"><label>Supplier Name</label><input id="e_supplierName" list="supplierNames" oninput="autofillSupplier('e')"></div>
         <div class="field"><label>Contact Person Name</label><input id="e_contactPerson"></div>
-        <div class="field"><label>Mobile Number</label><input id="e_contactMobile"></div>
+        <div class="field"><label>Mobile Number</label><input id="e_contactMobile" placeholder="+91 XXXXX XXXXX" onblur="formatMobileField(this)"></div>
         <div class="field"><label>Email ID</label><input type="email" id="e_contactEmail"></div>
         <div class="field"><label>Contact Person 2 (optional)</label><input id="e_contactPerson2"></div>
-        <div class="field"><label>Mobile Number 2 (optional)</label><input id="e_contactMobile2"></div>
+        <div class="field"><label>Mobile Number 2 (optional)</label><input id="e_contactMobile2" placeholder="+91 XXXXX XXXXX" onblur="formatMobileField(this)"></div>
         <div class="field"><label>PO Number</label><input id="e_poNumber"></div>
         <div class="field"><label>Part Number</label><input id="e_partNumber"></div>
         <div class="field"><label>Component / Part Description</label><input id="e_partDescription"></div>
@@ -622,6 +622,14 @@ function setFamilyVal(prefix, family){
 
 function val(id){ return document.getElementById(id).value; }
 function numVal(id){ const v = document.getElementById(id).value; return v === '' ? '' : Number(v); }
+/** Standardizes a mobile number field to "+91 XXXXX XXXXX" on blur, matching the backend's own normalization. */
+function formatMobileField(el){
+  const digits = (el.value || '').replace(/\D/g, '');
+  let d = digits;
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  if (d.length === 10) el.value = `+91 ${d.slice(0,5)} ${d.slice(5)}`;
+}
 function getMultiVal(id){ return [...document.getElementById(id).selectedOptions].map(o => o.value).join(', '); }
 function setMultiVal(id, commaStr){
   const parts = (commaStr || '').split(',').map(s => s.trim()).filter(Boolean);
