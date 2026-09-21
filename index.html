@@ -952,6 +952,7 @@ function openReport(ncNumber){
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${esc(r.ncNumber)}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   @page { size: A4; margin: 10mm 12mm; }
   @media print { .no-print { display:none !important; } body { margin:0; } }
@@ -969,8 +970,9 @@ function openReport(ncNumber){
   .sectionhead{background:#1f3864;color:#fff;font-weight:700;font-size:9.5px;padding:3px 7px;margin:8px 0 0;}
   .noteblock{border:1px solid #c9ccd4;border-top:none;padding:6px 8px;font-size:10px;min-height:16px;}
   .photorow{display:flex;gap:12px;border:1px solid #c9ccd4;border-top:none;padding:6px 8px;}
-  .printbar{position:sticky;top:0;background:#fff;padding:8px 0;margin-bottom:8px;border-bottom:1px solid #eee;display:flex;gap:10px;align-items:center;}
+  .printbar{position:sticky;top:0;background:#fff;padding:8px 0;margin-bottom:8px;border-bottom:1px solid #eee;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
   .printbtn{background:#1f3864;color:#fff;border:none;padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;}
+  .printbtn.secondary{background:#fff;color:#1f3864;border:1px solid #1f3864;}
   .mailbtn{background:#fff;color:#1f3864;border:1px solid #1f3864;padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;}
   .mailnote{font-size:11px;color:#6b7280;}
   .sign{margin-top:10px;font-size:10px;display:flex;justify-content:space-between;}
@@ -980,11 +982,13 @@ function openReport(ncNumber){
 </style></head>
 <body>
   <div class="printbar no-print">
-    <button class="printbtn" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="printbtn" onclick="downloadCleanPdf()">⬇ Download PDF</button>
+    <button class="printbtn secondary" onclick="window.print()">🖨 Print (browser)</button>
     <a class="mailbtn" href="${mailtoUrl}">✉ Send Mail</a>
-    ${!supplierEmail ? '<span class="mailnote">No supplier email on file - fill in the To: field manually.</span>' : '<span class="mailnote">Save as PDF first, then attach it in the mail that opens.</span>'}
+    ${!supplierEmail ? '<span class="mailnote">No supplier email on file - fill in the To: field manually.</span>' : '<span class="mailnote">Download the PDF first, then attach it in the mail that opens.</span>'}
   </div>
 
+  <div id="reportContent">
   <h2 class="doctitle-top">NON CONFORMITY REPORT</h2>
   <div class="letterhead">
     <img src="${document.querySelector('.brand .mark').src}">
@@ -1048,7 +1052,22 @@ function openReport(ncNumber){
   </div>
 
   <div class="foot-note">NOTE: If no response from supplier within 2 days, escalation will follow per the 8D / 2-2-2 rule. Root cause should be process/system related, not operator training alone.</div>
-  <div class="foot-note" style="text-align:right;border-top:none;padding-top:0;">Report generated: ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+  <div class="foot-note" style="text-align:right;border-top:none;padding-top:0;">Page 1 &nbsp;|&nbsp; Report generated: ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+  </div>
+
+  <script>
+    function downloadCleanPdf(){
+      const el = document.getElementById('reportContent');
+      const opt = {
+        margin: [10, 12, 10, 12],
+        filename: ${JSON.stringify(r.ncNumber + '.pdf')},
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(el).save();
+    }
+  </script>
 </body></html>`;
 
   const w = window.open('', '_blank');
