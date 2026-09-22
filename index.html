@@ -571,9 +571,9 @@ async function submitNew(){
     qtyInspected: numVal('f_qtyInspected'), defectQty: numVal('f_defectQty'), totalStock: numVal('f_totalStock'),
     stockStatus: val('f_stockStatus'), remarks: val('f_remarks'), traceability: val('f_traceability')
   };
-  if (!data.dateRaised || !data.supplierName || !data.partNumber) {
+  if (!data.dateRaised || !data.supplierName || (!data.partNumber && !data.partDescription)) {
     document.getElementById('newMsg').className = 'msg err';
-    document.getElementById('newMsg').textContent = 'Date, Supplier Name and Part Number are required.';
+    document.getElementById('newMsg').textContent = 'Date, Supplier Name, and Part Number or Part Description are required.';
     return;
   }
   document.getElementById('newMsg').className = 'msg';
@@ -918,7 +918,6 @@ function openReport(ncNumber){
     r.qtyInspected || r.defectQty ? `Sample Inspected: ${r.qtyInspected || '-'} Nos. | Defective Found: ${r.defectQty || '-'} Nos.` : '',
     r.traceability ? `Traceability / Docket No.: ${r.traceability}` : '', '',
     'Kindly investigate the root cause and take immediate corrective action. Please ensure 100% inspection before dispatch. Kindly share the RCA report along with corrective and preventive actions (CAPA) at the earliest.', '',
-    'Please note: TVL\'s 2-2-2 timeline is our own internal supplier-quality standard (applied on top of the standard 8D framework, not a clause of 8D itself), and you are required to strictly adhere to it - Containment Action (D3) within 2 Days, Root Cause Analysis (D4) within 2 Weeks, and Corrective & Preventive Action (D5-D8) within 2 Months from the date this NC is raised. Non-submission within this timeline will be treated as non-compliance and may result in a supplier rating downgrade, escalation to management, and/or rejection of the concerned lot/PO.', '',
     '(Please attach the PDF report - use the "Print / Save as PDF" button on the report page, save it, then attach it here before sending.)', '',
     'Thanks & Regards,', `${r.raisedBy || 'Sandeep Talla'}, Assistant Manager Quality`, 'Trans Valves (India) Pvt. Ltd.', '+91 9640898255 | sandeep@transvalves.com'
   ].join('\n');
@@ -982,7 +981,7 @@ function openReport(ncNumber){
 </style></head>
 <body>
   <div class="printbar no-print">
-    <button class="printbtn" onclick="downloadCleanPdf()">⬇ Download PDF</button>
+    <button class="printbtn" id="downloadBtn" onclick="downloadCleanPdf()">⬇ Download PDF</button>
     <button class="printbtn secondary" onclick="window.print()">🖨 Print (browser)</button>
     <a class="mailbtn" href="${mailtoUrl}">✉ Send Mail</a>
     ${!supplierEmail ? '<span class="mailnote">No supplier email on file - fill in the To: field manually.</span>' : '<span class="mailnote">Download the PDF first, then attach it in the mail that opens.</span>'}
@@ -1025,14 +1024,6 @@ function openReport(ncNumber){
     ${stageRow2('D4 — Root Cause', r.d4Due, r.d4Actual, r.d4Status, r.d4Rca)}
     ${stageRow2('D5–D8 — CAPA', r.d5Due, r.d5Actual, r.d5Status, r.d5Capa)}
   </table>
-  <div class="compliance-note">
-    <strong>Note:</strong> The 2-2-2 timeline above is TVL's own internal supplier-quality standard, applied on top of
-    the standard 8D framework (D1–D8) — it is not a clause of the 8D methodology itself. The supplier is required to
-    strictly adhere to it: submit the Containment Action (D3) within <strong>2 Days</strong>, the Root Cause Analysis
-    (D4) within <strong>2 Weeks</strong>, and the Corrective &amp; Preventive Action (D5–D8) within <strong>2 Months</strong>
-    from the date this NC is raised. Non-submission within the stipulated timeline will be treated as non-compliance
-    and may result in a supplier rating downgrade, escalation to management, and/or rejection of the concerned lot / PO.
-  </div>
 
   ${r.remarks ? `<div class="sectionhead">REMARKS / OTHER INFORMATION</div><div class="noteblock">${esc(r.remarks)}</div>` : ''}
 
@@ -1051,12 +1042,34 @@ function openReport(ncNumber){
     </div>
   </div>
 
-  <div class="foot-note">NOTE: If no response from supplier within 2 days, escalation will follow per the 8D / 2-2-2 rule. Root cause should be process/system related, not operator training alone.</div>
   <div class="foot-note" style="text-align:left;border-top:none;padding-top:0;">Page 1 &nbsp;|&nbsp; Report generated: ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</div>
   </div>
 
   <script>
-    function downloadCleanPdf(){
+    const REPORT_API_URL = ${JSON.stringify(API_URL)};
+
+    /** Swaps every <img> inside the report from a Drive link to an embedded data URI, since Drive's images
+     *  can't be read cross-origin by html2canvas's internal rendering. */
+    async function prepareImagesForPdf(){
+      const imgs = [...document.querySelectorAll('#reportContent img')];
+      await Promise.all(imgs.map(async img => {
+        const m = /[?&]id=([^&]+)/.exec(img.src);
+        if (!m) return;
+        try {
+          const res = await fetch(\`\${REPORT_API_URL}?action=fileBase64&id=\${m[1]}\`);
+          const data = await res.json();
+          if (data.base64) img.src = \`data:\${data.mime};base64,\${data.base64}\`;
+        } catch (e) { /* leave the original link if this one fails - rest of the report still renders */ }
+      }));
+    }
+
+    async function downloadCleanPdf(){
+      const btn = document.getElementById('downloadBtn');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Preparing images...';
+      await prepareImagesForPdf();
+      btn.textContent = 'Generating PDF...';
       const el = document.getElementById('reportContent');
       const opt = {
         margin: [10, 12, 10, 12],
@@ -1065,7 +1078,9 @@ function openReport(ncNumber){
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      html2pdf().set(opt).from(el).save();
+      await html2pdf().set(opt).from(el).save();
+      btn.disabled = false;
+      btn.textContent = original;
     }
   <\/script>
 </body></html>`;
