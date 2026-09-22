@@ -878,7 +878,7 @@ function splitUrls(str){
   return str ? String(str).split('\n').map(s => s.trim()).filter(Boolean) : [];
 }
 function galleryHtml(urls, maxH, ncNumber, field){
-  if (!urls.length) return '<div class="msg" style="color:var(--sub);">No photo attached</div>';
+  if (!urls.length) return '<div class="msg" style="color:#6b7280;">No photo attached</div>';
   return `<div style="display:flex;flex-wrap:wrap;gap:6px;">` + urls.map(u => `
     <div style="position:relative;width:${urls.length>1?'calc(50% - 3px)':'100%'};">
       <a href="${u}" target="_blank"><img src="${driveThumb(u)}" style="width:100%;max-height:${maxH}px;object-fit:contain;border:1px solid var(--line);border-radius:6px;display:block;"></a>
@@ -981,10 +981,10 @@ function openReport(ncNumber){
 </style></head>
 <body>
   <div class="printbar no-print">
-    <button class="printbtn" id="downloadBtn" onclick="downloadCleanPdf()">⬇ Download PDF</button>
-    <button class="printbtn secondary" onclick="window.print()">🖨 Print (browser)</button>
+    <button class="printbtn" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="printbtn secondary" id="downloadBtn" onclick="downloadCleanPdf()">⬇ Download PDF (beta - may miss content on some reports)</button>
     <a class="mailbtn" href="${mailtoUrl}">✉ Send Mail</a>
-    ${!supplierEmail ? '<span class="mailnote">No supplier email on file - fill in the To: field manually.</span>' : '<span class="mailnote">Download the PDF first, then attach it in the mail that opens.</span>'}
+    ${!supplierEmail ? '<span class="mailnote">No supplier email on file - fill in the To: field manually.</span>' : '<span class="mailnote">Use Print / Save as PDF first (turn off "Headers and footers" in More settings, once), then attach that file in the mail that opens.</span>'}
   </div>
 
   <div id="reportContent">
@@ -1075,7 +1075,10 @@ function openReport(ncNumber){
         margin: [10, 12, 10, 12],
         filename: ${JSON.stringify(r.ncNumber + '.pdf')},
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: {
+          scale: 2, useCORS: true, scrollX: 0, scrollY: 0,
+          windowWidth: el.scrollWidth, windowHeight: el.scrollHeight
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       await html2pdf().set(opt).from(el).save();
